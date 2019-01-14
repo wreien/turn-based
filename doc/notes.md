@@ -39,6 +39,43 @@
         - entity first, then equipment
         - additive first, then multiplicative
 
+## Stats
+
+### High Level Requirements
+
+- Different "kinds" of entities have different base stats
+- Level actually makes no difference for stats in and of itself
+    - it's just a marker noting how strong you are overall
+    - a level up simply applies modifiers to your base stats for players
+    - higher level variants of monsters just get different base stat blocks
+- Status effects can apply modifiers to your base stats
+    - doesn't change base stats permanantly, just their current effects
+    - can be removed or applied at any time, potentially
+    - shouldn't break invariants (e.g. $\texttt{HP}_{cur}\leq \texttt{HP}_{max}$)
+
+### Implementation
+
+- Move current stats for health, mana and tech into the entities themselves
+    - too complicated dealing with them inside base stats, imo
+    - **TODO** need some way to keep invariants in line
+- Move level/xp req as well into the entities
+- Similar to skills, list of modifiers
+    - each modifier only affects one stat
+    - can be either additive or multiplicative
+    - sum multiplicative for a tier first before application
+    - **TODO** applied purely in order of application? or add/mult first?
+        - level up mods first, purely in order of application
+        - equipment mods second, additive then multiplicative
+        - status effect last, additive then multiplicative
+    - modifiers applied to hp,mp,tech should modify them appropriately too
+        - applying increase grants that much of the stat
+        - applying decrease or removing increase caps stat at new maximum
+        - removing decrease has no effect
+    - have two types:
+        - temporary (status effects)
+        - permanant (level ups) (allow for level-down mechanics?)
+- Modifiers templated?
+
 ## Visualiser
 
 ### Process flow

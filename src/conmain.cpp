@@ -72,10 +72,10 @@ auto init() {
 
 void drawEntity(const battle::Entity& entity) {
     const auto stats = entity.getStats();
-    std::cout << "\"" << entity.getKind() << "\" level " << stats.level << " | "
-              << "HP: " << stats.cur_hp << "/" << stats.max_hp << " | "
-              << "MP: " << stats.cur_mp << "/" << stats.max_mp << " | "
-              << "Tech: " << stats.cur_tech << "/" << stats.max_tech << "\n";
+    std::cout << "\"" << entity.getKind() << "\" level " << entity.getLevel() << " | "
+              << "HP: " << entity.getHP() << "/" << stats.max_hp << " | "
+              << "MP: " << entity.getMP() << "/" << stats.max_mp << " | "
+              << "Tech: " << entity.getTech() << "/" << stats.max_tech << "\n";
 }
 
 void drawTeams(const battle::BattleSystem& system) {
