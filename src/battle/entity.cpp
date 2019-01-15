@@ -53,7 +53,7 @@ Entity::Entity(const std::string& kind, int level)
 }
 
 Entity::Entity(std::filesystem::path file)
-    : kind{ "<" + file.filename().native() + ">" }
+    : kind{ "<" + file.filename().string() + ">" }
     , level{ 0 }
     , exp_to_next{ 0 } // TODO
     , stats{ getEntityStats(file) }

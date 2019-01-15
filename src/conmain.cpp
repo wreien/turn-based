@@ -1,6 +1,7 @@
 #include <cstdlib>
 #include <functional>
 #include <iostream>
+#include <locale>
 #include <memory>
 #include <numeric>
 #include <string>
@@ -156,11 +157,11 @@ struct TurnDrawer {
 
         auto c = getInput<char>([&](auto c){
             for (auto&& [id, msg, fn] : choice)
-                if (std::tolower(c) == id) return true;
+                if (std::tolower(c, std::locale{}) == id) return true;
             return false;
         });
         for (auto&& [id, msg, fn] : choice)
-            if (std::tolower(c) == id)
+            if (std::tolower(c, std::locale{}) == id)
                 controller.choose(fn());
     }
 };
