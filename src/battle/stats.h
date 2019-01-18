@@ -2,6 +2,7 @@
 #define BATTLE_STATS_H_INCLUDED
 
 #include <array>
+#include <vector>
 #include "element.h"
 
 namespace battle {
@@ -66,6 +67,9 @@ struct StatModifier {
     StatModType type;  ///< how to calculate the modification
 };
 
+/// Apply a collection of stat modifiers to a stat block
+[[nodiscard]] Stats
+calculateModifiedStats(Stats s, std::vector<StatModifier> mods) noexcept;
 
 }
 

@@ -7,11 +7,42 @@ namespace battle {
 // TODO: entity factory functions
 namespace {
     Stats getEntityStats(const std::string& kind, int level) {
-        (void)kind;
-        (void)level;
-        return {};
+        // The raddest scaling you'll ever see
+        if (kind.find("good")) {
+            return {
+                5 * level,  // hp
+                2 * level,  // mp
+                10,         // tech
+                3 * level,  // p_atk
+                2 * level,  // p_def
+                2 * level,  // m_atk
+                3 * level,  // m_def
+                5,          // skill
+                5,          // evade
+                5,          // speed
+                { 0 }       // resist
+            };
+        } else if (kind.find("evil")) {
+            return {
+                3 * level,  // hp
+                3 * level,  // mp
+                10,         // tech
+                2 * level,  // p_atk
+                2 * level,  // p_def
+                3 * level,  // m_atk
+                2 * level,  // m_def
+                5,          // skill
+                5,          // evade
+                8,          // speed
+                { 0 }       // resist
+            };
+        } else {
+            // who even cares
+            return {};
+        }
     }
 
+    // TODO
     Stats getEntityStats(std::filesystem::path file) {
         (void)file;
         return {};
@@ -23,6 +54,7 @@ namespace {
         return {};
     }
 
+    // TODO
     std::vector<Skill> getEntitySkills(std::filesystem::path file) {
         (void)file;
         return {};
@@ -67,14 +99,15 @@ Entity::Entity(std::filesystem::path file)
     // TODO: update level here
 }
 
-Stats Entity::getStats() const noexcept {
-    // TODO: apply equipment bonuses, status effects, etc.
-    return stats;
-}
-
 std::vector<SkillRef> Entity::getSkills() const {
     // TODO: apply equipment bonuses, status effects, etc.
     return { std::begin(skills), std::end(skills) };
+}
+
+Stats Entity::getStats() const noexcept {
+    // TODO: apply equipment bonuses, etc.
+    // TODO: cache results?
+    return calculateModifiedStats(stats, mods);
 }
 
 // TODO: cap/mod hp/mp/tech as appropriate
