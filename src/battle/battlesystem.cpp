@@ -33,7 +33,7 @@ BattleSystem::BattleSystem(const std::vector<EntityRef>& blues,
         turn_order.push_back(r++);
     }
 
-    current_turn = std::begin(turn_order);
+    sortTurnOrder();
 }
 
 

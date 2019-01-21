@@ -8,7 +8,7 @@ namespace battle {
 namespace {
     Stats getEntityStats(const std::string& kind, int level) {
         // The raddest scaling you'll ever see
-        if (kind.find("good")) {
+        if (kind.find("good") != std::string::npos) {
             return {
                 5 * level,  // hp
                 2 * level,  // mp
@@ -19,10 +19,10 @@ namespace {
                 3 * level,  // m_def
                 5,          // skill
                 5,          // evade
-                5,          // speed
+                5 + level,  // speed
                 { 0 }       // resist
             };
-        } else if (kind.find("evil")) {
+        } else if (kind.find("evil") != std::string::npos) {
             return {
                 3 * level,  // hp
                 3 * level,  // mp
@@ -33,7 +33,7 @@ namespace {
                 2 * level,  // m_def
                 5,          // skill
                 5,          // evade
-                8,          // speed
+                6 + level,  // speed
                 { 0 }       // resist
             };
         } else {
