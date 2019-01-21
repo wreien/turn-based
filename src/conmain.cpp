@@ -12,8 +12,14 @@
 #include "battle/npccontroller.h"
 #include "battle/playercontroller.h"
 
+// TODO: do these actually work on Windows? This is so dodgy...
+constexpr const char red_colour[]   = "\033[31m";
+constexpr const char blue_colour[]  = "\033[36m";
+constexpr const char bold_colour[]  = "\033[1m";
+constexpr const char reset_colour[] = "\033[0m";
+
 template <typename T, typename F>
-T getInput(F is_valid, std::string_view errormsg = "Invalid input!\n> ") {
+T getInput(F is_valid, std::string_view errmsg = "\033[1;33mInvalid input!\n> \033[0m") {
     // T should be default-constructable
     T value{};
 
@@ -24,7 +30,7 @@ T getInput(F is_valid, std::string_view errormsg = "Invalid input!\n> ") {
             std::exit(0);
         }
 
-        std::cout << errormsg;
+        std::cout << errmsg;
 
         std::cin.clear();
         std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
@@ -37,25 +43,26 @@ T getInput(F is_valid, std::string_view errormsg = "Invalid input!\n> ") {
 }
 
 template <typename T>
-T getInput(std::string_view errormsg = "Invalid input!\n> ") {
-    return getInput<T>([](auto){ return true; }, errormsg);
+T getInput(std::string_view errmsg = "\033[1;33mInvalid input!\n> \033[0m") {
+    return getInput<T>([](auto){ return true; }, errmsg);
 }
 
 auto init() {
     using battle::Team;
 
-    std::cout << "Welcome to the wonderful battle simulator!\n\n";
+    std::cout << bold_colour << "Welcome to the wonderful battle simulator!\n\n";
 
     int players = 0, enemies = 0;
-    std::cout << "How many players?\n> ";
+    std::cout << bold_colour << "How many players?\n> " << reset_colour;
     players = getInput<int>();
-    std::cout << "How many enemies?\n> ";
+    std::cout << bold_colour << "How many enemies?\n> " << reset_colour;
     enemies = getInput<int>();
 
     std::vector<std::shared_ptr<battle::Entity>> blue;
     for (int i = 0; i < players; ++i) {
         auto e = std::make_shared<battle::Entity>(
-                "default good #" + std::to_string(i + 1), 1);
+            std::string{blue_colour} + "default good #" +
+                std::to_string(i + 1) + reset_colour, 1);
         e->assignController<battle::PlayerController>();
         blue.push_back(std::move(e));
     }
@@ -63,7 +70,8 @@ auto init() {
     std::vector<std::shared_ptr<battle::Entity>> red;
     for (int i = 0; i < enemies; ++i) {
         auto e = std::make_shared<battle::Entity>(
-                "default evil #" + std::to_string(i + 1), 1);
+            std::string{red_colour} + "default evil #" +
+                std::to_string(i + 1) + reset_colour, 1);
         e->assignController<battle::NPCController>();
         red.push_back(std::move(e));
     }
@@ -81,10 +89,12 @@ void drawEntity(const battle::Entity& entity) {
 
 void drawTeams(const battle::BattleSystem& system) {
     using battle::Team;
-    std::cout << "\nBlue team:\n" << std::string(60, '=') << "\n";
+    std::cout << bold_colour << blue_colour;
+    std::cout << "\nBlue team:\n" << std::string(60, '=') << reset_colour << "\n";
     for (auto entity : system.getTeam(Team::Blue))
         drawEntity(*entity);
-    std::cout << "\nRed team:\n" << std::string(60, '=') << "\n";
+    std::cout << bold_colour << red_colour;
+    std::cout << "\nRed team:\n" << std::string(60, '=') << reset_colour << "\n";
     for (auto entity : system.getTeam(Team::Red))
         drawEntity(*entity);
     std::cout << "\n";
@@ -134,10 +144,11 @@ struct TurnDrawer {
         if (!options.skills.empty())
             choice.emplace_back('s', "[S]kill", [&s = options.skills](){
                 int i = 0;
+                std::cout << bold_colour;
                 std::cout << "Choose skill (enter the number, 0 to defend):\n";
                 for (auto&& skill : s)
                     std::cout << "  " << ++i << ". " << skill->name << "\n";
-                std::cout << "> ";
+                std::cout << "> " << reset_colour;
 
                 auto x = getInput<unsigned>([&](auto x){
                     return 0 <= x && x <= s.size();
@@ -148,8 +159,9 @@ struct TurnDrawer {
             auto printStat = [](auto stat){ return std::string(stat, '*'); };
             auto& e = controller.getEntity();
             battle::Stats s = e.getStats();
-            std::cout << "Stats for " << e.getKind() << ":\n";
-            std::cout << "HP:     " << s.max_hp << "/" << e.getHP() << "\n"
+            std::cout << bold_colour << "Stats for " << e.getKind() << ":\n";
+            std::cout << reset_colour
+                      << "HP:     " << s.max_hp << "/" << e.getHP() << "\n"
                       << "MP:     " << s.max_mp << "/" << e.getMP() << "\n"
                       << "Tech:   " << s.max_tech << "/" << e.getTech() << "\n"
                       << "P. atk: " << printStat(s.p_atk) << "\n"
@@ -165,13 +177,12 @@ struct TurnDrawer {
         choice.emplace_back('q', "[Q]uit", []() -> battle::Action {
             std::cout << "Goodbye!\n";
             std::exit(0);
-            return {};
         });
 
-        std::cout << "===\nWhat will " << entity.getKind() << " do?\n";
+        std::cout << bold_colour << "\nWhat will " << entity.getKind() << " do?\n";
         for (auto&& [id, msg, fn] : choice)
             std::cout << " - " <<  msg << "\n";
-        std::cout << "> ";
+        std::cout << "> " << reset_colour;
 
         auto c = getInput<char>([&](auto c){
             for (auto&& [id, msg, fn] : choice)
@@ -194,7 +205,7 @@ int main() {
         std::visit(TurnDrawer{ info.entity }, info.action);
     }
 
-    std::cout << "Game over! Come back next time!\n" << std::flush;
+    std::cout << bold_colour << "Game over! Come back next time!\n" << std::flush;
 
     return 0;
 }
