@@ -144,6 +144,24 @@ struct TurnDrawer {
                 });
                 return UntargetedSkill{ s[x - 1] };
             });
+        choice.emplace_back('t', "S[t]ats", [&controller](){
+            auto printStat = [](auto stat){ return std::string(stat, '*'); };
+            auto& e = controller.getEntity();
+            battle::Stats s = e.getStats();
+            std::cout << "Stats for " << e.getKind() << ":\n";
+            std::cout << "HP:     " << s.max_hp << "/" << e.getHP() << "\n"
+                      << "MP:     " << s.max_mp << "/" << e.getMP() << "\n"
+                      << "Tech:   " << s.max_tech << "/" << e.getTech() << "\n"
+                      << "P. atk: " << printStat(s.p_atk) << "\n"
+                      << "P. def: " << printStat(s.p_def) << "\n"
+                      << "M. atk: " << printStat(s.m_atk) << "\n"
+                      << "M. def: " << printStat(s.m_def) << "\n"
+                      << "Skill:  " << printStat(s.skill) << "\n"
+                      << "Evade:  " << printStat(s.evade) << "\n"
+                      << "Speed:  " << printStat(s.speed) << "\n";
+            // TODO: resistances
+            return UserChoice{ controller };
+        });
         choice.emplace_back('q', "[Q]uit", []() -> battle::Action {
             std::cout << "Goodbye!\n";
             std::exit(0);

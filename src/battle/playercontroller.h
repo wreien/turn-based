@@ -29,6 +29,10 @@ public:
     [[nodiscard]] UserOptions options() const;
     void choose(const Action& act);
 
+    [[nodiscard]] constexpr const Entity& getEntity() const noexcept {
+        return entity;
+    }
+
 private:
     Entity& entity;
     std::optional<Action> choice;
