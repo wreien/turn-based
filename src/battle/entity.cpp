@@ -99,6 +99,8 @@ Entity::Entity(std::filesystem::path file)
     // TODO: update level here
 }
 
+Entity::~Entity() = default;
+
 std::vector<SkillRef> Entity::getSkills() const {
     // TODO: apply equipment bonuses, status effects, etc.
     return { std::begin(skills), std::end(skills) };

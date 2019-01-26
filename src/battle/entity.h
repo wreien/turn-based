@@ -26,11 +26,24 @@ public:
     /// Create an entity of the given kind at the provided level
     Entity(const std::string& kind, int level);
 
+    /// Destructor; needed for unique_ptr with abstract type
+    ~Entity();
+
+    struct nest_controller_tag {};
+
     /// Set the (new) contoller for the entity
+    /// Pass Entity::nest_controller_tag{} as the first argument if you
+    /// need the first constructor arg to be the old controller
     template <typename ControllerType, typename... Args>
     void assignController(Args&&... args) {
         controller = std::make_unique<ControllerType>(
                 *this, std::forward<Args>(args)...);
+    }
+
+    template <typename ControllerType, typename... Args>
+    void assignController(nest_controller_tag, Args&&... args) {
+        controller = std::make_unique<ControllerType>(
+                *this, std::move(controller), std::forward<Args>(args)...);
     }
 
     /// Retrieve the entity's controller
@@ -57,19 +70,36 @@ public:
     /// \TODO Return a proxy instead, for efficiency? (premature optimization much)
     [[nodiscard]] Stats getStats() const noexcept;
 
-    /// Get remaining health.
-    [[nodiscard]] constexpr auto getHP() const noexcept {
-        return hp;
+    /// Get the remaining amount of the specified pool
+    template <Pool pool>
+    [[nodiscard]] auto get() const noexcept {
+        return getPoolRef<pool>();
     }
 
-    /// Get remaining mana.
-    [[nodiscard]] constexpr auto getMP() const noexcept {
-        return mp;
+    /// Get the current maximum value of the specified pool
+    template <Pool pool>
+    [[nodiscard]] auto getMax() const noexcept {
+        if constexpr (pool == Pool::HP)
+            return getStats().max_hp;
+        else if constexpr (pool == Pool::MP)
+            return getStats().max_mp;
+        else if constexpr (pool == Pool::Tech)
+            return getStats().max_tech;
     }
 
-    /// Get remaining tech points.
-    [[nodiscard]] constexpr auto getTech() const noexcept {
-        return tech;
+    template <Pool pool>
+    void drain(Entity&, int amt) noexcept {
+        auto& p = getPoolRef<pool>();
+        p -= std::max(amt, 0);
+        if (p < 0) p = 0;
+    }
+
+    template <Pool pool>
+    void restore(Entity&, int amt) noexcept {
+        auto& p = getPoolRef<pool>();
+        const auto s = getMax<pool>();
+        p += std::max(amt, 0);
+        if (p > s) p = s;
     }
 
     /// Retrieve the entity's skills after any modifiers have been applied
@@ -77,9 +107,20 @@ public:
 
     /// Applies a status modification to the entity's base stats
     /// TODO: provide some diff about how stats changed?
+    /// TODO: generalise for status effects
     void applyStatModifier(StatModifier s);
 
 private:
+    template <Pool pool>
+    constexpr auto& getPoolRef() const noexcept {
+        if constexpr (pool == Pool::HP)
+            return hp;
+        else if constexpr (pool == Pool::MP)
+            return mp;
+        else if constexpr (pool == Pool::Tech)
+            return tech;
+    }
+
     /// What kind of entity this is
     std::string kind;
 

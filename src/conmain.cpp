@@ -72,11 +72,14 @@ auto init() {
 }
 
 void drawEntity(const battle::Entity& entity) {
-    const auto stats = entity.getStats();
+    constexpr auto HP   = battle::Pool::HP;
+    constexpr auto MP   = battle::Pool::MP;
+    constexpr auto Tech = battle::Pool::Tech;
+
     std::cout << "\"" << entity.getKind() << "\" level " << entity.getLevel() << " | "
-              << "HP: " << entity.getHP() << "/" << stats.max_hp << " | "
-              << "MP: " << entity.getMP() << "/" << stats.max_mp << " | "
-              << "Tech: " << entity.getTech() << "/" << stats.max_tech << "\n";
+              << "HP: " << entity.get<HP>() << "/" << entity.getMax<HP>() << " | "
+              << "MP: " << entity.get<MP>() << "/" << entity.getMax<MP>() << " | "
+              << "Tech: " << entity.get<Tech>() << "/" << entity.getMax<Tech>() << "\n";
 }
 
 void drawTeams(const battle::BattleSystem& system) {
@@ -145,13 +148,14 @@ struct TurnDrawer {
                 return UntargetedSkill{ s[x - 1] };
             });
         choice.emplace_back('t', "S[t]ats", [&controller](){
+            using P = battle::Pool;
             auto printStat = [](auto stat){ return std::string(stat, '*'); };
             auto& e = controller.getEntity();
             battle::Stats s = e.getStats();
             std::cout << "Stats for " << e.getKind() << ":\n";
-            std::cout << "HP:     " << s.max_hp << "/" << e.getHP() << "\n"
-                      << "MP:     " << s.max_mp << "/" << e.getMP() << "\n"
-                      << "Tech:   " << s.max_tech << "/" << e.getTech() << "\n"
+            std::cout << "HP:     " << s.max_hp << "/" << e.get<P::HP>() << "\n"
+                      << "MP:     " << s.max_mp << "/" << e.get<P::MP>() << "\n"
+                      << "Tech:   " << s.max_tech << "/" << e.get<P::Tech>() << "\n"
                       << "P. atk: " << printStat(s.p_atk) << "\n"
                       << "P. def: " << printStat(s.p_def) << "\n"
                       << "M. atk: " << printStat(s.m_atk) << "\n"
