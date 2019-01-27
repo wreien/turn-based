@@ -108,12 +108,12 @@ struct TurnDrawer {
     }
 
     void operator()(battle::action::TargetedSkill s) const noexcept {
-        std::cout << entity.getKind() << " used " << s.skill->name
+        std::cout << entity.getKind() << " used " << s.skill->getName()
                   << " on " << s.target.getKind() << "!\n";
     }
 
     void operator()(battle::action::UntargetedSkill s) const noexcept {
-        std::cout << entity.getKind() << " used " << s.skill->name << "!\n";
+        std::cout << entity.getKind() << " used " << s.skill->getName() << "!\n";
     }
 
     void operator()(battle::action::UserChoice u) const noexcept {
@@ -139,7 +139,7 @@ struct TurnDrawer {
                 int i = 0;
                 std::cout << "Choose skill (enter the number, 0 to defend):\n";
                 for (auto&& skill : s)
-                    std::cout << "  " << ++i << ". " << skill->name << "\n";
+                    std::cout << "  " << ++i << ". " << skill->getName() << "\n";
                 std::cout << "> ";
 
                 auto x = getInput<unsigned>([&](auto x){

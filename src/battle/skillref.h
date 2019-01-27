@@ -5,7 +5,7 @@
 namespace battle {
 
 
-struct Skill;
+class Skill;
 
 /// Opaque skill reference
 class SkillRef {
