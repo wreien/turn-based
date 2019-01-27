@@ -80,11 +80,14 @@ auto init() {
 }
 
 void drawEntity(const battle::Entity& entity) {
-    const auto stats = entity.getStats();
+    constexpr auto HP   = battle::Pool::HP;
+    constexpr auto MP   = battle::Pool::MP;
+    constexpr auto Tech = battle::Pool::Tech;
+
     std::cout << "\"" << entity.getKind() << "\" level " << entity.getLevel() << " | "
-              << "HP: " << entity.getHP() << "/" << stats.max_hp << " | "
-              << "MP: " << entity.getMP() << "/" << stats.max_mp << " | "
-              << "Tech: " << entity.getTech() << "/" << stats.max_tech << "\n";
+              << "HP: " << entity.get<HP>() << "/" << entity.getMax<HP>() << " | "
+              << "MP: " << entity.get<MP>() << "/" << entity.getMax<MP>() << " | "
+              << "Tech: " << entity.get<Tech>() << "/" << entity.getMax<Tech>() << "\n";
 }
 
 void drawTeams(const battle::BattleSystem& system) {
@@ -100,9 +103,20 @@ void drawTeams(const battle::BattleSystem& system) {
     std::cout << "\n";
 }
 
+/// The interactive monstrosity
+/// In a real renderer I'd split this into multiple classes and things,
+/// but for my purposes here (a test-bed) this works fine.
 struct TurnDrawer {
-    TurnDrawer(const battle::Entity& entity) : entity{ entity } {}
+    TurnDrawer(const battle::Entity& entity,
+               const std::vector<battle::Entity*>& red_team,
+               const std::vector<battle::Entity*>& blue_team)
+        : entity{ entity }
+        , red_team{ red_team }
+        , blue_team{ blue_team }
+    {}
     const battle::Entity& entity;
+    std::vector<battle::Entity*> red_team;
+    std::vector<battle::Entity*> blue_team;
 
     void operator()(battle::action::Defend) const noexcept {
         std::cout << entity.getKind() << " is defending!\n";
@@ -114,13 +128,9 @@ struct TurnDrawer {
         std::cout << entity.getKind() << " couldn't run!\n";
     }
 
-    void operator()(battle::action::TargetedSkill s) const noexcept {
-        std::cout << entity.getKind() << " used " << s.skill->name
+    void operator()(battle::action::Skill s) const noexcept {
+        std::cout << entity.getKind() << " used " << s.skill->getName()
                   << " on " << s.target.getKind() << "!\n";
-    }
-
-    void operator()(battle::action::UntargetedSkill s) const noexcept {
-        std::cout << entity.getKind() << " used " << s.skill->name << "!\n";
     }
 
     void operator()(battle::action::UserChoice u) const noexcept {
@@ -142,28 +152,62 @@ struct TurnDrawer {
         if (options.flee)
             choice.emplace_back('f', "[F]lee", [](){ return Flee{}; });
         if (!options.skills.empty())
-            choice.emplace_back('s', "[S]kill", [&s = options.skills](){
-                int i = 0;
+            choice.emplace_back('s', "[S]kill", [&]() -> battle::Action {
                 std::cout << bold_colour;
                 std::cout << "Choose skill (enter the number, 0 to defend):\n";
-                for (auto&& skill : s)
-                    std::cout << "  " << ++i << ". " << skill->name << "\n";
-                std::cout << "> " << reset_colour;
 
-                auto x = getInput<unsigned>([&](auto x){
-                    return 0 <= x && x <= s.size();
+                int i = 0;
+                for (auto&& skill : options.skills) {
+                    std::cout << bold_colour << "  " << ++i << ". ";
+                    std::cout << reset_colour << skill->getName() << "\n";
+                }
+                std::cout << "> ";
+
+                auto skillchoice = getInput<unsigned>([&](auto x){
+                    return 0 <= x && x <= options.skills.size();
                 });
-                return UntargetedSkill{ s[x - 1] };
+
+                if (skillchoice == 0)
+                    return Defend {};
+
+                auto skill = options.skills[skillchoice - 1];
+
+                // TODO: handle Spread::Self
+                std::cout << "Choose target:\n";
+
+                i = 0;
+                std::cout << red_colour << bold_colour << "Red team:\n";
+                for (auto&& target : red_team) {
+                    std::cout << reset_colour << bold_colour << "  " << ++i << ". ";
+                    drawEntity(*target);
+                }
+                std::cout << "Blue Team:\n";
+                for (auto&& target : blue_team) {
+                    std::cout << reset_colour << bold_colour << "  " << ++i << ". ";
+                    drawEntity(*target);
+                }
+                std::cout << reset_colour << bold_colour << "> " << reset_colour;
+
+                auto targetchoice = getInput<unsigned>([&](auto x){
+                    return 0 < x && x <= red_team.size() + blue_team.size();
+                });
+                auto target = (targetchoice <= red_team.size()) ?
+                        red_team[targetchoice - 1]
+                      : blue_team[targetchoice - red_team.size() - 1];
+                auto& team = (targetchoice <= red_team.size()) ? red_team : blue_team;
+
+                return Skill{ skill, *target, team };
             });
         choice.emplace_back('t', "S[t]ats", [&controller](){
+            using P = battle::Pool;
             auto printStat = [](auto stat){ return std::string(stat, '*'); };
             auto& e = controller.getEntity();
             battle::Stats s = e.getStats();
             std::cout << bold_colour << "Stats for " << e.getKind() << ":\n";
             std::cout << reset_colour
-                      << "HP:     " << s.max_hp << "/" << e.getHP() << "\n"
-                      << "MP:     " << s.max_mp << "/" << e.getMP() << "\n"
-                      << "Tech:   " << s.max_tech << "/" << e.getTech() << "\n"
+                      << "HP:     " << s.max_hp << "/" << e.get<P::HP>() << "\n"
+                      << "MP:     " << s.max_mp << "/" << e.get<P::MP>() << "\n"
+                      << "Tech:   " << s.max_tech << "/" << e.get<P::Tech>() << "\n"
                       << "P. atk: " << printStat(s.p_atk) << "\n"
                       << "P. def: " << printStat(s.p_def) << "\n"
                       << "M. atk: " << printStat(s.m_atk) << "\n"
@@ -202,7 +246,12 @@ int main() {
 
     while (!system.isDone()) {
         battle::TurnInfo info = system.doTurn();
-        std::visit(TurnDrawer{ info.entity }, info.action);
+        TurnDrawer drawer {
+            info.entity,
+            system.getTeam(battle::Team::Red),
+            system.getTeam(battle::Team::Blue)
+        };
+        std::visit(drawer, info.action);
     }
 
     std::cout << bold_colour << "Game over! Come back next time!\n" << std::flush;

@@ -4,9 +4,11 @@
 #include <vector>
 #include <optional>
 #include "controller.h"
-#include "skill.h"
+#include "skillref.h"
 
 namespace battle {
+
+class Entity;
 
 /// Options that a user has to choose from for their action
 struct UserOptions {
@@ -17,7 +19,6 @@ struct UserOptions {
 
     // TODO: items; split up skills here?
 };
-
 
 /// The controller for interfacing human interaction with an entity
 class PlayerController : public Controller {

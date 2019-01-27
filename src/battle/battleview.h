@@ -2,10 +2,11 @@
 #define BATTLE_BATTLEVIEW_H_INCLUDED
 
 #include <vector>
-#include "entity.h"
 
 namespace battle {
 
+
+class Entity;
 
 // Observe the current state of the battle
 struct BattleView {

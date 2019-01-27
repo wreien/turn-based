@@ -5,7 +5,7 @@
 namespace battle {
 
 
-struct Skill;
+class Skill;
 
 /// Opaque skill reference
 class SkillRef {
@@ -24,7 +24,6 @@ public:
     const Skill* operator->() const noexcept { return skill; }
 
 private:
-    friend class Entity;
     const Skill* skill;
 };
 

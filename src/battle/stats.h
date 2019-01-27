@@ -37,6 +37,13 @@ struct Stats {
     std::array<int, num_elements> resist;
 };
 
+/// Lists valid "pooled" stats
+enum class Pool {
+    HP,    ///< health pool
+    MP,    ///< mana pool
+    Tech,  ///< tech pool
+};
+
 /// Lists all the different options for a stat modifier
 enum class StatType {
     hp,     ///< max health

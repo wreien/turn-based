@@ -51,7 +51,10 @@ namespace {
     std::vector<Skill> getEntitySkills(const std::string& kind, int level) {
         (void)kind;
         (void)level;
-        return {};
+        std::vector<Skill> skills;
+        skills.emplace_back("attack");
+        skills.emplace_back("heal");
+        return skills;
     }
 
     // TODO
@@ -98,6 +101,8 @@ Entity::Entity(std::filesystem::path file)
 {
     // TODO: update level here
 }
+
+Entity::~Entity() = default;
 
 std::vector<SkillRef> Entity::getSkills() const {
     // TODO: apply equipment bonuses, status effects, etc.
