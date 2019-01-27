@@ -93,9 +93,20 @@ void drawTeams(const battle::BattleSystem& system) {
     std::cout << "\n";
 }
 
+/// The interactive monstrosity
+/// In a real renderer I'd split this into multiple classes and things,
+/// but for my purposes here (a test-bed) this works fine.
 struct TurnDrawer {
-    TurnDrawer(const battle::Entity& entity) : entity{ entity } {}
+    TurnDrawer(const battle::Entity& entity,
+               const std::vector<battle::Entity*>& red_team,
+               const std::vector<battle::Entity*>& blue_team)
+        : entity{ entity }
+        , red_team{ red_team }
+        , blue_team{ blue_team }
+    {}
     const battle::Entity& entity;
+    const std::vector<battle::Entity*>& red_team;
+    const std::vector<battle::Entity*>& blue_team;
 
     void operator()(battle::action::Defend) const noexcept {
         std::cout << entity.getKind() << " is defending!\n";
@@ -107,13 +118,9 @@ struct TurnDrawer {
         std::cout << entity.getKind() << " couldn't run!\n";
     }
 
-    void operator()(battle::action::TargetedSkill s) const noexcept {
+    void operator()(battle::action::Skill s) const noexcept {
         std::cout << entity.getKind() << " used " << s.skill->getName()
                   << " on " << s.target.getKind() << "!\n";
-    }
-
-    void operator()(battle::action::UntargetedSkill s) const noexcept {
-        std::cout << entity.getKind() << " used " << s.skill->getName() << "!\n";
     }
 
     void operator()(battle::action::UserChoice u) const noexcept {
@@ -135,17 +142,43 @@ struct TurnDrawer {
         if (options.flee)
             choice.emplace_back('f', "[F]lee", [](){ return Flee{}; });
         if (!options.skills.empty())
-            choice.emplace_back('s', "[S]kill", [&s = options.skills](){
-                int i = 0;
+            choice.emplace_back('s', "[S]kill", [&](){
                 std::cout << "Choose skill (enter the number, 0 to defend):\n";
-                for (auto&& skill : s)
+
+                int i = 0;
+                for (auto&& skill : options.skills)
                     std::cout << "  " << ++i << ". " << skill->getName() << "\n";
                 std::cout << "> ";
 
-                auto x = getInput<unsigned>([&](auto x){
-                    return 0 <= x && x <= s.size();
+                auto skillchoice = getInput<unsigned>([&](auto x){
+                    return 0 < x && x <= options.skills.size();
                 });
-                return UntargetedSkill{ s[x - 1] };
+                auto skill = options.skills[skillchoice - 1];
+
+                // TODO: handle Spread::Self
+                std::cout << "Choose target:\n";
+
+                i = 0;
+                std::cout << "Red team:\n";
+                for (auto&& target : red_team) {
+                    std::cout << "  " << ++i << ". ";
+                    drawEntity(*target);
+                }
+                std::cout << "Blue Team:\n";
+                for (auto&& target : blue_team) {
+                    std::cout << "  " << ++i << ". ";
+                    drawEntity(*target);
+                }
+
+                auto targetchoice = getInput<unsigned>([&](auto x){
+                    return 0 < x && x <= red_team.size() + blue_team.size() - 1;
+                });
+                auto target = (targetchoice <= red_team.size()) ?
+                        red_team[targetchoice - 1]
+                      : blue_team[targetchoice - red_team.size() - 1];
+                auto& team = (targetchoice <= red_team.size()) ? red_team : blue_team;
+
+                return Skill{ skill, *target, team };
             });
         choice.emplace_back('t', "S[t]ats", [&controller](){
             using P = battle::Pool;
@@ -195,7 +228,12 @@ int main() {
 
     while (!system.isDone()) {
         battle::TurnInfo info = system.doTurn();
-        std::visit(TurnDrawer{ info.entity }, info.action);
+        TurnDrawer drawer {
+            info.entity,
+            system.getTeam(battle::Team::Red),
+            system.getTeam(battle::Team::Blue)
+        };
+        std::visit(drawer, info.action);
     }
 
     std::cout << "Game over! Come back next time!\n" << std::flush;

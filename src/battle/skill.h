@@ -18,12 +18,12 @@ class Entity;
 namespace skill {
 
     /// Determines the spread of an attack
+    /// TODO: field attacks (probably not actually a `skill' in the same way)
     enum class Spread {
         Self,    ///< targets source
         Single,  ///< targets one entity
         SemiAoE, ///< targets one entity, with spread to rest of their team
         AoE,     ///< targets a whole team
-        Field,   ///< untargeted
     };
 
     struct CostHook;

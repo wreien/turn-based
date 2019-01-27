@@ -97,22 +97,19 @@ TurnInfo BattleSystem::doTurn() {
     Action act = controller.go(view);
 
     bool turnFinished = true;
-    using namespace action;
     std::visit(overload{
-        [&](Defend){
+        [&](action::Defend){
             // at this stage, do nothing ;)
         },
-        [&](Flee){
+        [&](action::Flee){
             // at this stage, do nothing ;)
             turnFinished = false;
         },
-        [&](TargetedSkill){
-            // TODO: do the skill
+        [&](action::Skill& s){
+            // TODO: get the results
+            s.skill->use(*c.entity, s.target, s.team);
         },
-        [&](UntargetedSkill){
-            // TODO: do the skill
-        },
-        [&](UserChoice){
+        [&](action::UserChoice){
             turnFinished = false;
         }
     }, act);
