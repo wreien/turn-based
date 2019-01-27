@@ -26,6 +26,7 @@ set(SOURCE_FILES
     src/battle/playercontroller.h
     src/battle/skill.cpp
     src/battle/skill.h
+    src/battle/skillhooks.h
     src/battle/skillref.h
     src/battle/stats.h
     src/battle/stats.cpp

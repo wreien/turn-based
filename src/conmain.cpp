@@ -105,8 +105,8 @@ struct TurnDrawer {
         , blue_team{ blue_team }
     {}
     const battle::Entity& entity;
-    const std::vector<battle::Entity*>& red_team;
-    const std::vector<battle::Entity*>& blue_team;
+    std::vector<battle::Entity*> red_team;
+    std::vector<battle::Entity*> blue_team;
 
     void operator()(battle::action::Defend) const noexcept {
         std::cout << entity.getKind() << " is defending!\n";
@@ -142,7 +142,7 @@ struct TurnDrawer {
         if (options.flee)
             choice.emplace_back('f', "[F]lee", [](){ return Flee{}; });
         if (!options.skills.empty())
-            choice.emplace_back('s', "[S]kill", [&](){
+            choice.emplace_back('s', "[S]kill", [&]() -> battle::Action {
                 std::cout << "Choose skill (enter the number, 0 to defend):\n";
 
                 int i = 0;
@@ -151,8 +151,12 @@ struct TurnDrawer {
                 std::cout << "> ";
 
                 auto skillchoice = getInput<unsigned>([&](auto x){
-                    return 0 < x && x <= options.skills.size();
+                    return 0 <= x && x <= options.skills.size();
                 });
+
+                if (skillchoice == 0)
+                    return Defend {};
+
                 auto skill = options.skills[skillchoice - 1];
 
                 // TODO: handle Spread::Self
@@ -171,7 +175,7 @@ struct TurnDrawer {
                 }
 
                 auto targetchoice = getInput<unsigned>([&](auto x){
-                    return 0 < x && x <= red_team.size() + blue_team.size() - 1;
+                    return 0 < x && x <= red_team.size() + blue_team.size();
                 });
                 auto target = (targetchoice <= red_team.size()) ?
                         red_team[targetchoice - 1]

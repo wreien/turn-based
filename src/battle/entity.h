@@ -116,7 +116,17 @@ public:
 
 private:
     template <Pool pool>
-    constexpr auto& getPoolRef() const noexcept {
+    constexpr auto& getPoolRef() noexcept {
+        if constexpr (pool == Pool::HP)
+            return hp;
+        else if constexpr (pool == Pool::MP)
+            return mp;
+        else if constexpr (pool == Pool::Tech)
+            return tech;
+    }
+
+    template <Pool pool>
+    constexpr const auto& getPoolRef() const noexcept {
         if constexpr (pool == Pool::HP)
             return hp;
         else if constexpr (pool == Pool::MP)

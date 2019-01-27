@@ -1,4 +1,5 @@
 #include "skill.h"
+#include "skillhooks.h"
 #include "entity.h"
 
 namespace battle {
@@ -14,6 +15,13 @@ Skill::Skill(const std::string& name)
     , effect_hooks{ }
     , post_hooks{ }
 {
+    // TODO: don't hardcode :)
+    if (name == "heal") {
+        addHook(PoolCost<Pool::MP>{ 1 });
+        addHook(HealEffect{ 5 });
+    } else if (name == "attack") {
+        addHook(DamageEffect<skill::Stats::Physical>{ 2 });
+    }
 }
 
 bool Skill::isUsableBy(const Entity& source) const noexcept {

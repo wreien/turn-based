@@ -51,7 +51,10 @@ namespace {
     std::vector<Skill> getEntitySkills(const std::string& kind, int level) {
         (void)kind;
         (void)level;
-        return {};
+        std::vector<Skill> skills;
+        skills.emplace_back("attack");
+        skills.emplace_back("heal");
+        return skills;
     }
 
     // TODO

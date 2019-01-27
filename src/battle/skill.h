@@ -50,7 +50,7 @@ namespace skill {
         }
 
         friend constexpr bool operator==(HookID lhs, HookID rhs) noexcept {
-            return lhs.type == rhs.type && lhs.hash == rhs.hash;
+            return lhs.hash == rhs.hash;
         }
         friend constexpr bool operator!=(HookID lhs, HookID rhs) noexcept {
             return !(lhs == rhs);
@@ -173,7 +173,7 @@ public:
     template <typename Hook>
     void addHook(Hook&& hook) {
         auto& hook_list = getHookList<Hook>();
-        removeHook(hook->id); // don't have two of the same hook
+        removeHook(hook.id); // don't have two of the same hook
         hook_list.push_back(
             std::make_unique<std::remove_reference_t<Hook>>(
                 std::forward<Hook>(hook)));
@@ -185,8 +185,8 @@ public:
         auto& hook_list = getHookList<Hook>();
         hook_list.erase(std::remove_if(
             std::begin(hook_list), std::end(hook_list),
-            [id](auto hook) { return hook->id == id; }
-        ));
+            [id](auto&& hook) { return hook->id == id; }
+        ), std::end(hook_list));
     }
 
 private:
