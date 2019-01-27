@@ -3,6 +3,7 @@
 #include <algorithm>
 #include "controller.h"
 #include "battleview.h"
+#include "entity.h"
 #include "../util.h"
 
 namespace battle {

@@ -2,9 +2,10 @@
 #define BATTLE_NPCCONTROLLER_H_INCLUDED
 
 #include "controller.h"
-#include "entity.h"
 
 namespace battle {
+
+class Entity;
 
 // Generic AI controller for entities
 class NPCController : public Controller {

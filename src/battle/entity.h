@@ -110,6 +110,10 @@ public:
     /// TODO: generalise for status effects
     void applyStatModifier(StatModifier s);
 
+    [[nodiscard]] bool isDead() const noexcept {
+        return hp <= 0;
+    }
+
 private:
     template <Pool pool>
     constexpr auto& getPoolRef() const noexcept {

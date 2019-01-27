@@ -24,7 +24,6 @@ public:
     const Skill* operator->() const noexcept { return skill; }
 
 private:
-    friend class Entity;
     const Skill* skill;
 };
 

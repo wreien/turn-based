@@ -4,11 +4,11 @@
 #include <vector>
 #include <utility>
 #include <memory>
-#include "entity.h"
 #include "action.h"
 
 namespace battle {
 
+class Entity;
 
 /// Which team the entity is on.
 /// Order determines turn priority in case of a tie.
