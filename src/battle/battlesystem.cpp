@@ -96,26 +96,24 @@ TurnInfo BattleSystem::doTurn() {
 
     Action act = controller.go(view);
 
-    bool turnFinished = true;
     std::visit(overload{
         [&](action::Defend){
             // at this stage, do nothing ;)
+            gotoNextTurn();
         },
         [&](action::Flee){
             // at this stage, do nothing ;)
-            turnFinished = false;
+            gotoNextTurn();
         },
         [&](action::Skill& s){
             // TODO: get the results
             s.skill->use(*c.entity, s.target, s.team);
+            gotoNextTurn();
         },
         [&](action::UserChoice){
-            turnFinished = false;
         }
     }, act);
 
-    if (turnFinished)
-        gotoNextTurn();
     return { act, *c.entity, c.team };
 }
 

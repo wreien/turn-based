@@ -70,7 +70,7 @@ struct DamageEffect : EffectHook {
         if constexpr (stats == Stats::Physical)
             amt *= 4.0 * source_stats.p_atk - 2.0 * target_stats.p_def;
         else if constexpr (stats == Stats::Magical)
-            amt *= 4.0 * source_stats.m_atk - 2.8 * target_stats.m_def;
+            amt *= 4.0 * source_stats.m_atk - 2.0 * target_stats.m_def;
         target.drain<Pool::HP>(source, mod * amt);
     }
 

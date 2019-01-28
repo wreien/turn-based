@@ -173,6 +173,7 @@ struct TurnDrawer {
                     std::cout << "  " << ++i << ". ";
                     drawEntity(*target);
                 }
+                std::cout << "> ";
 
                 auto targetchoice = getInput<unsigned>([&](auto x){
                     return 0 < x && x <= red_team.size() + blue_team.size();
@@ -184,22 +185,23 @@ struct TurnDrawer {
 
                 return Skill{ skill, *target, team };
             });
-        choice.emplace_back('t', "S[t]ats", [&controller](){
+        choice.emplace_back('i', "[I]nfo", [&controller](){
             using P = battle::Pool;
             auto printStat = [](auto stat){ return std::string(stat, '*'); };
             auto& e = controller.getEntity();
             battle::Stats s = e.getStats();
             std::cout << "Stats for " << e.getKind() << ":\n";
-            std::cout << "HP:     " << s.max_hp << "/" << e.get<P::HP>() << "\n"
-                      << "MP:     " << s.max_mp << "/" << e.get<P::MP>() << "\n"
-                      << "Tech:   " << s.max_tech << "/" << e.get<P::Tech>() << "\n"
-                      << "P. atk: " << printStat(s.p_atk) << "\n"
-                      << "P. def: " << printStat(s.p_def) << "\n"
-                      << "M. atk: " << printStat(s.m_atk) << "\n"
-                      << "M. def: " << printStat(s.m_def) << "\n"
-                      << "Skill:  " << printStat(s.skill) << "\n"
-                      << "Evade:  " << printStat(s.evade) << "\n"
-                      << "Speed:  " << printStat(s.speed) << "\n";
+            std::cout
+                << "HP:     " << e.get<P::HP>() << "/" << e.getMax<P::HP>() << "\n"
+                << "MP:     " << e.get<P::MP>() << "/" << e.getMax<P::MP>() << "\n"
+                << "Tech:   " << e.get<P::Tech>() << "/" << e.getMax<P::Tech>() << "\n"
+                << "P. atk: " << printStat(s.p_atk) << "\n"
+                << "P. def: " << printStat(s.p_def) << "\n"
+                << "M. atk: " << printStat(s.m_atk) << "\n"
+                << "M. def: " << printStat(s.m_def) << "\n"
+                << "Skill:  " << printStat(s.skill) << "\n"
+                << "Evade:  " << printStat(s.evade) << "\n"
+                << "Speed:  " << printStat(s.speed) << "\n";
             // TODO: resistances
             return UserChoice{ controller };
         });

@@ -12,13 +12,13 @@ It's very much a work in progress, so be gentle. Or not. Either way.
 This project requires a C++17 compatible compiler. Versions that should work:
 - GCC 8.2
 - Clang 7
-- MSVC 2017 (I haven't tested this one though)
+- MSVC 2017
 
 You also need SFML version 2.5; it may be available on your package manager,
 otherwise you can download it from their website [here][SFML].
 
 Finally, you need CMake to generate the project files. I've put it at a
-minimum version of 3.13; to be honest, earlier versions could possibly work
+minimum version of 3.12; to be honest, earlier versions could possibly work
 fine, but I've never tried. *Shrugs*
 
 [SFML]: https://www.sfml-dev.org
@@ -47,4 +47,6 @@ otherwise set the `RENDERER` value appropriately.
 Currently the following renderers are available:
 
 - `console`: a 1970's style text interface. _Very_ bare-bones. (Default)
+    - the `colour_console` branch has a possibly-outdated version with (some)
+      colours.
 - `sfml`: a 2D graphical interface. (Really just a black screen at the moment)

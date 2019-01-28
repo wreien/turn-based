@@ -10,7 +10,7 @@ namespace {
         // The raddest scaling you'll ever see
         if (kind.find("good") != std::string::npos) {
             return {
-                5 * level,  // hp
+                35 * level, // hp
                 2 * level,  // mp
                 10,         // tech
                 3 * level,  // p_atk
@@ -24,7 +24,7 @@ namespace {
             };
         } else if (kind.find("evil") != std::string::npos) {
             return {
-                3 * level,  // hp
+                27 * level, // hp
                 3 * level,  // mp
                 10,         // tech
                 2 * level,  // p_atk
