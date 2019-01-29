@@ -1,6 +1,7 @@
 #include "skill.h"
 #include "skillhooks.h"
 #include "entity.h"
+#include <cmath>
 
 namespace battle {
 
@@ -9,6 +10,8 @@ using namespace skill;
 Skill::Skill(const std::string& name)
     : name{ name }
     , spread{ Spread::Single }
+    , power_sources{ }
+    , accuracy_sources{ }
     , cost_hooks{ }
     , check_hooks{ }
     , mod_hooks{ }
@@ -90,14 +93,25 @@ Spread Skill::getSpread() const noexcept {
     return spread;
 }
 
+// TODO: if needed, cache results? (this is also goes for getAccuracy)
+// I don't expect it to be an issue, though, since it's unlikely for any skill
+// to have more than one or two power/accuracy checks
 std::optional<int> Skill::getPower() const noexcept {
-    // TODO
-    return std::nullopt;
+    if (std::empty(power_sources))
+        return std::nullopt;
+    int power = 0;
+    for (auto&& entry : power_sources)
+        power += entry.second;
+    return power;
 }
 
 std::optional<int> Skill::getAccuracy() const noexcept {
-    // TODO
-    return std::nullopt;
+    if (std::empty(accuracy_sources))
+        return std::nullopt;
+    double accuracy = 1;
+    for (auto&& entry : accuracy_sources)
+        accuracy *= static_cast<double>(entry.second) / 100.0;
+    return std::round(accuracy * 100.0);
 }
 
 

@@ -6,6 +6,7 @@
 #include <optional>
 #include <memory>
 #include <vector>
+#include <unordered_map>
 #include <type_traits>
 #include <algorithm>
 #include "stats.h"
@@ -63,13 +64,30 @@ namespace skill {
     /// Determine if a given type is a hook
     template <typename T, typename = void> struct is_hook : std::false_type {};
     template <typename T> struct is_hook<T, std::enable_if_t<
+        // need to make sure only *one* of the following is true
+        // relying on equivalence between `bool' and `1', and integer promotion rules
         std::is_base_of_v<CostHook, T>
-     || std::is_base_of_v<CheckHook, T>
-     || std::is_base_of_v<ModifierHook, T>
-     || std::is_base_of_v<EffectHook, T>
-     || std::is_base_of_v<PostHook, T>
+      + std::is_base_of_v<CheckHook, T>
+      + std::is_base_of_v<ModifierHook, T>
+      + std::is_base_of_v<EffectHook, T>
+      + std::is_base_of_v<PostHook, T>
+     == 1
     >> : std::true_type {};
     template <typename T> inline constexpr auto is_hook_v = is_hook<T>::value;
+
+    template <typename T, typename = void> struct has_power : std::false_type {};
+    template <typename T> struct has_power<T, std::enable_if_t<
+        std::is_base_of_v<EffectHook, T>
+     && std::is_same_v<decltype(std::declval<T>().power), int>
+    >> : std::true_type {};
+    template <typename T> inline constexpr auto has_power_v = has_power<T>::value;
+
+    template <typename T, typename = void> struct has_accuracy : std::false_type {};
+    template <typename T> struct has_accuracy<T, std::enable_if_t<
+        std::is_base_of_v<CheckHook, T>
+     && std::is_same_v<decltype(std::declval<T>().accuracy), int>
+    >> : std::true_type {};
+    template <typename T> inline constexpr auto has_accuracy_v = has_accuracy<T>::value;
 
     /// Skill hook to apply pre-use costs to the skill.
     /// Allows a skill to disallow choice if the requirements are unavailable.
@@ -172,26 +190,49 @@ public:
     /// Requires "Hook" to be a valid hook type
     template <typename Hook>
     void addHook(Hook&& hook) {
-        auto& hook_list = getHookList<Hook>();
         removeHook(hook.id); // don't have two of the same hook
-        hook_list.push_back(
-            std::make_unique<std::remove_reference_t<Hook>>(
-                std::forward<Hook>(hook)));
+        auto& hook_list = getHookList<Hook>();
+        auto ptr = std::make_unique<std::remove_reference_t<Hook>>(
+                std::forward<Hook>(hook));
+        // TODO: handle this more nicely than sticking it awkwardly in here
+        if constexpr (skill::has_power_v<Hook>)
+            power_sources[ptr.get()] = hook.power;
+        if constexpr (skill::has_accuracy_v<Hook>)
+            accuracy_sources[ptr.get()] = hook.accuracy;
+        hook_list.push_back(std::move(ptr));
     }
 
     /// Remove a hook from the hook lists, if it exists
     template <typename Hook>
     void removeHook(skill::HookID<Hook> id) {
         auto& hook_list = getHookList<Hook>();
-        hook_list.erase(std::remove_if(
+        auto to_erase = std::remove_if(   // reminder: remove_if is a terrible name
             std::begin(hook_list), std::end(hook_list),
             [id](auto&& hook) { return hook->id == id; }
-        ), std::end(hook_list));
+        );
+        // TODO: handle this more nicely than sticking it awkwardly in here
+        if constexpr (std::is_same_v<skill::EffectHook, Hook>) {
+            std::for_each(to_erase, std::end(hook_list), [&](auto&& x){
+                power_sources.erase(x.get());
+            });
+        }
+        if constexpr (std::is_same_v<skill::CheckHook, Hook>) {
+            std::for_each(to_erase, std::end(hook_list), [&](auto&& x){
+                accuracy_sources.erase(x.get());
+            });
+        }
+        hook_list.erase(to_erase, std::end(hook_list));
     }
 
 private:
     std::string name;    ///< the name of the skill
     skill::Spread spread; ///< the spread of the skill
+
+    ///< the hooks that contribute to the skill's power
+    std::unordered_map<skill::EffectHook*, int> power_sources;
+
+    ///< the hooks that contribute to the skill's accuracy
+    std::unordered_map<skill::CheckHook*, int> accuracy_sources;
 
     std::vector<std::unique_ptr<skill::CostHook>> cost_hooks;
     std::vector<std::unique_ptr<skill::CheckHook>> check_hooks;
@@ -201,7 +242,7 @@ private:
 
     /// Get the appropriate list of hooks depending on the hook type
     template <typename Hook>
-    constexpr auto& getHookList() noexcept {
+    [[nodiscard]] constexpr auto& getHookList() noexcept {
         using namespace skill;
         static_assert(skill::is_hook_v<Hook>);
         if constexpr (std::is_base_of_v<CostHook, Hook>)

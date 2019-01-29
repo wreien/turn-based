@@ -146,8 +146,14 @@ struct TurnDrawer {
                 std::cout << "Choose skill (enter the number, 0 to defend):\n";
 
                 int i = 0;
-                for (auto&& skill : options.skills)
-                    std::cout << "  " << ++i << ". " << skill->getName() << "\n";
+                for (auto&& skill : options.skills) {
+                    auto power = skill->getPower();
+                    auto accuracy = skill->getAccuracy();
+                    std::cout << "  " << ++i << ". " << skill->getName();
+                    if (power) std::cout << " | power = " << *power;
+                    if (accuracy) std::cout << " | accuracy = " << *accuracy;
+                    std::cout << "\n";
+                }
                 std::cout << "> ";
 
                 auto skillchoice = getInput<unsigned>([&](auto x){
