@@ -43,11 +43,11 @@ struct HealEffect : EffectHook {
 
     void apply(Entity& source, Entity& target, double mod) const noexcept override {
         auto source_stats = source.getStats();
-        (void)target; // unused
 
         // TODO: balance :)
-        double amt = power * (0.8 * source_stats.m_atk + 1.2 * source_stats.m_def);
-        target.restore<Pool::HP>(source, std::ceil(mod * amt * 0.3));
+        double raw = power * (0.8 * source_stats.m_atk + 1.2 * source_stats.m_def);
+        double heal = std::ceil(mod * raw);
+        target.restore<Pool::HP>(source, static_cast<int>(heal));
     }
 
     int power;
@@ -66,12 +66,19 @@ struct DamageEffect : EffectHook {
 
         static_assert(stats == Stats::Physical || stats == Stats::Magical);
 
-        double amt = power;
-        if constexpr (stats == Stats::Physical)
-            amt *= 4.0 * source_stats.p_atk - 2.0 * target_stats.p_def;
-        else if constexpr (stats == Stats::Magical)
-            amt *= 4.0 * source_stats.m_atk - 2.0 * target_stats.m_def;
-        target.drain<Pool::HP>(source, mod * amt);
+        int atk = 0;
+        int def = 0;
+        if constexpr (stats == Stats::Physical) {
+            atk = source_stats.p_atk;
+            def = target_stats.p_def;
+        } else if constexpr (stats == Stats::Magical) {
+            atk = source_stats.m_atk;
+            def = target_stats.m_def;
+        }
+
+        double raw = std::max(4 * atk - 2 * def, 0);
+        double dmg = power * raw * mod;
+        target.drain<Pool::HP>(source, static_cast<int>(dmg));
     }
 
     int power;

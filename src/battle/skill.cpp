@@ -21,7 +21,7 @@ Skill::Skill(const std::string& name)
     // TODO: don't hardcode :)
     if (name == "heal") {
         addHook(PoolCost<Pool::MP>{ 1 });
-        addHook(HealEffect{ 5 });
+        addHook(HealEffect{ 2 });
     } else if (name == "attack") {
         addHook(DamageEffect<skill::Stats::Physical>{ 2 });
     }
@@ -111,7 +111,7 @@ std::optional<int> Skill::getAccuracy() const noexcept {
     double accuracy = 1;
     for (auto&& entry : accuracy_sources)
         accuracy *= static_cast<double>(entry.second) / 100.0;
-    return std::round(accuracy * 100.0);
+    return static_cast<int>(std::round(accuracy * 100.0));
 }
 
 

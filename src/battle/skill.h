@@ -165,6 +165,11 @@ public:
     /// Create the a specified skill
     explicit Skill(const std::string& name);
 
+    // Explicit move constructors for MSVC
+    // see https://stackoverflow.com/questions/54421110/
+    Skill(Skill&&) = default;
+    Skill& operator=(Skill&&) = default;
+
     /// Get the display name of the skill
     [[nodiscard]] std::string_view getName() const noexcept {
         return name;
