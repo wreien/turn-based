@@ -4,11 +4,12 @@
 #include <vector>
 #include <utility>
 #include <memory>
-#include "action.h"
+#include "messages.h"
 
 namespace battle {
 
 class Entity;
+class PlayerController;
 
 /// Which team the entity is on.
 /// Order determines turn priority in case of a tie.
@@ -19,16 +20,9 @@ enum class Team {
 
 /// Contains information about the happenings of the last turn
 struct TurnInfo {
-    /// the action performed
-    Action action;
-
-    /// who performed it
-    const Entity& entity;
-
-    /// on what team
-    Team team;
-
-    // TODO: a list of things that happened?
+    bool need_user_input; ///< whether we now need user input
+    PlayerController* controller; ///< the user's controller (if needing user input)
+    std::vector<Message> messages; ///< what happened since the last turn
 };
 
 /// Manages and runs the battle; the game loop, if you will.

@@ -96,6 +96,9 @@ void BattleSystem::gotoNextTurn() {
 // Actually run the game
 
 TurnInfo BattleSystem::doTurn() {
+    MessageLogger logger;
+    TurnInfo info { false, nullptr, {} };
+
     auto& c = combatants[*current_turn];
     auto& controller = c.entity->getController();
 
@@ -109,10 +112,12 @@ TurnInfo BattleSystem::doTurn() {
     std::visit(overload{
         [&](action::Defend){
             // at this stage, do nothing ;)
+            logger.appendMessage(message::Defended{ *c.entity });
             gotoNextTurn();
         },
         [&](action::Flee){
             // at this stage, do nothing ;)
+            logger.appendMessage(message::Fled{ *c.entity, true });
             gotoNextTurn();
         },
         [&](action::Skill& s){
@@ -122,6 +127,8 @@ TurnInfo BattleSystem::doTurn() {
                 [&s](auto&& c){ return c.entity.get() == &s.target; }
             );
             if (it != std::end(combatants)) {
+                logger.appendMessage(message::SkillUsed{
+                    s.skill, *c.entity, *it->entity });
                 s.skill->use(*c.entity, *it->entity, getEntities(it->team));
                 gotoNextTurn();
             } else {
@@ -129,11 +136,14 @@ TurnInfo BattleSystem::doTurn() {
                         "BattleSystem::doTurn/Skill: entity not found");
             }
         },
-        [&](action::UserChoice){
+        [&](action::UserChoice user) {
+            info.need_user_input = true;
+            info.controller = &user.controller;
         }
     }, act);
 
-    return { act, *c.entity, c.team };
+    info.messages = logger.pop();
+    return info;
 }
 
 bool BattleSystem::isDone() const {

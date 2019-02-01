@@ -11,6 +11,7 @@
 #include "battle/entity.h"
 #include "battle/npccontroller.h"
 #include "battle/playercontroller.h"
+#include "util.h"
 
 template <typename T, typename F>
 T getInput(F is_valid, std::string_view errormsg = "Invalid input!\n> ") {
@@ -93,144 +94,158 @@ void drawTeams(const battle::BattleSystem& system) {
     std::cout << "\n";
 }
 
-/// The interactive monstrosity
-/// In a real renderer I'd split this into multiple classes and things,
-/// but for my purposes here (a test-bed) this works fine.
-struct TurnDrawer {
-    TurnDrawer(const battle::Entity& entity,
-               const battle::BattleSystem& system)
-        : entity{ entity }
-        , system{ system }
-    {}
-    const battle::Entity& entity;
-    const battle::BattleSystem& system;
+// TODO: would probably split up the options placing
+// also make this simpler to loop/re-enter, etc.
+void handleUserChoice(battle::PlayerController& controller,
+                      const battle::BattleSystem& system)
+{
+    using namespace battle::action;
 
-    void operator()(battle::action::Defend) const noexcept {
-        std::cout << entity.getKind() << " is defending!\n";
-    }
+    std::vector<
+        std::tuple<
+            char,
+            std::string,
+            std::function<battle::Action()>
+        >
+    > choice;
 
-    void operator()(battle::action::Flee) const noexcept {
-        std::cout << entity.getKind() << " attempted to flee!\n";
-        // TODO actually test something here
-        std::cout << entity.getKind() << " couldn't run!\n";
-    }
+    auto options = controller.options();
 
-    void operator()(battle::action::Skill s) const noexcept {
-        std::cout << entity.getKind() << " used " << s.skill->getName()
-                  << " on " << s.target.getKind() << "!\n";
-    }
+    if (options.defend)
+        choice.emplace_back('d', "[D]efend", [](){ return Defend{}; });
+    if (options.flee)
+        choice.emplace_back('f', "[F]lee", [](){ return Flee{}; });
+    if (!options.skills.empty())
+        choice.emplace_back('s', "[S]kill", [&]() -> battle::Action {
+            std::cout << "Choose skill (enter the number, 0 to defend):\n";
 
-    void operator()(battle::action::UserChoice u) const noexcept {
-        using namespace battle::action;
+            int i = 0;
+            for (auto&& skill : options.skills) {
+                auto power = skill->getPower();
+                auto accuracy = skill->getAccuracy();
+                std::cout << "  " << ++i << ". " << skill->getName();
+                if (power) std::cout << " | power = " << *power;
+                if (accuracy) std::cout << " | accuracy = " << *accuracy;
+                std::cout << "\n";
+            }
+            std::cout << "> ";
 
-        std::vector<
-            std::tuple<
-                char,
-                std::string,
-                std::function<battle::Action()>
-            >
-        > choice;
-
-        auto& controller = u.controller;
-        auto options = controller.options();
-
-        if (options.defend)
-            choice.emplace_back('d', "[D]efend", [](){ return Defend{}; });
-        if (options.flee)
-            choice.emplace_back('f', "[F]lee", [](){ return Flee{}; });
-        if (!options.skills.empty())
-            choice.emplace_back('s', "[S]kill", [&]() -> battle::Action {
-                std::cout << "Choose skill (enter the number, 0 to defend):\n";
-
-                int i = 0;
-                for (auto&& skill : options.skills) {
-                    auto power = skill->getPower();
-                    auto accuracy = skill->getAccuracy();
-                    std::cout << "  " << ++i << ". " << skill->getName();
-                    if (power) std::cout << " | power = " << *power;
-                    if (accuracy) std::cout << " | accuracy = " << *accuracy;
-                    std::cout << "\n";
-                }
-                std::cout << "> ";
-
-                auto skillchoice = getInput<unsigned>([&](auto x){
-                    return 0 <= x && x <= options.skills.size();
-                });
-
-                if (skillchoice == 0)
-                    return Defend {};
-
-                auto skill = options.skills[skillchoice - 1];
-
-                // TODO: handle Spread::Self
-                std::cout << "Choose target:\n";
-
-                auto red_team = system.getEntities(battle::Team::Red);
-                auto blue_team = system.getEntities(battle::Team::Blue);
-
-                i = 0;
-                std::cout << "Red team:\n";
-                for (auto&& target : red_team) {
-                    std::cout << "  " << ++i << ". ";
-                    drawEntity(*target);
-                }
-                std::cout << "Blue Team:\n";
-                for (auto&& target : blue_team) {
-                    std::cout << "  " << ++i << ". ";
-                    drawEntity(*target);
-                }
-                std::cout << "> ";
-
-                auto targetchoice = getInput<unsigned>([&](auto x){
-                    return 0 < x && x <= red_team.size() + blue_team.size();
-                });
-                auto target = (targetchoice <= red_team.size()) ?
-                        red_team[targetchoice - 1]
-                      : blue_team[targetchoice - red_team.size() - 1];
-
-                return Skill{ skill, *target };
+            auto skillchoice = getInput<unsigned>([&](auto x){
+                return 0 <= x && x <= options.skills.size();
             });
-        choice.emplace_back('i', "[I]nfo", [&controller](){
-            using P = battle::Pool;
-            auto printStat = [](auto stat){ return std::string(stat, '*'); };
-            auto& e = controller.getEntity();
-            battle::Stats s = e.getStats();
-            std::cout << "Stats for " << e.getKind() << ":\n";
-            std::cout
-                << "HP:     " << e.get<P::HP>() << "/" << e.getMax<P::HP>() << "\n"
-                << "MP:     " << e.get<P::MP>() << "/" << e.getMax<P::MP>() << "\n"
-                << "Tech:   " << e.get<P::Tech>() << "/" << e.getMax<P::Tech>() << "\n"
-                << "P. atk: " << printStat(s.p_atk) << "\n"
-                << "P. def: " << printStat(s.p_def) << "\n"
-                << "M. atk: " << printStat(s.m_atk) << "\n"
-                << "M. def: " << printStat(s.m_def) << "\n"
-                << "Skill:  " << printStat(s.skill) << "\n"
-                << "Evade:  " << printStat(s.evade) << "\n"
-                << "Speed:  " << printStat(s.speed) << "\n";
-            // TODO: resistances
-            return UserChoice{ controller };
-        });
-        choice.emplace_back('q', "[Q]uit", []() -> battle::Action {
-            std::cout << "Goodbye!\n";
-            std::exit(0);
-            return {};
-        });
 
-        std::cout << "===\nWhat will " << entity.getKind() << " do?\n";
-        for (auto&& [id, msg, fn] : choice)
-            std::cout << " - " <<  msg << "\n";
-        std::cout << "> ";
+            if (skillchoice == 0)
+                return Defend {};
 
-        auto c = getInput<char>([&](auto c){
-            for (auto&& [id, msg, fn] : choice)
-                if (std::tolower(c, std::locale{}) == id) return true;
-            return false;
+            auto skill = options.skills[skillchoice - 1];
+
+            // TODO: handle Spread::Self
+            std::cout << "Choose target:\n";
+
+            auto red_team = system.getEntities(battle::Team::Red);
+            auto blue_team = system.getEntities(battle::Team::Blue);
+
+            i = 0;
+            std::cout << "Red team:\n";
+            for (auto&& target : red_team) {
+                std::cout << "  " << ++i << ". ";
+                drawEntity(*target);
+            }
+            std::cout << "Blue Team:\n";
+            for (auto&& target : blue_team) {
+                std::cout << "  " << ++i << ". ";
+                drawEntity(*target);
+            }
+            std::cout << "> ";
+
+            auto targetchoice = getInput<unsigned>([&](auto x){
+                return 0 < x && x <= red_team.size() + blue_team.size();
+            });
+            auto target = (targetchoice <= red_team.size()) ?
+                    red_team[targetchoice - 1]
+                  : blue_team[targetchoice - red_team.size() - 1];
+
+            return Skill{ skill, *target };
         });
+    choice.emplace_back('i', "[I]nfo", [&controller](){
+        using P = battle::Pool;
+        auto printStat = [](auto stat){ return std::string(stat, '*'); };
+        auto& e = controller.getEntity();
+        battle::Stats s = e.getStats();
+        std::cout << "Stats for " << e.getKind() << ":\n";
+        std::cout
+            << "HP:     " << e.get<P::HP>() << "/" << e.getMax<P::HP>() << "\n"
+            << "MP:     " << e.get<P::MP>() << "/" << e.getMax<P::MP>() << "\n"
+            << "Tech:   " << e.get<P::Tech>() << "/" << e.getMax<P::Tech>() << "\n"
+            << "P. atk: " << printStat(s.p_atk) << "\n"
+            << "P. def: " << printStat(s.p_def) << "\n"
+            << "M. atk: " << printStat(s.m_atk) << "\n"
+            << "M. def: " << printStat(s.m_def) << "\n"
+            << "Skill:  " << printStat(s.skill) << "\n"
+            << "Evade:  " << printStat(s.evade) << "\n"
+            << "Speed:  " << printStat(s.speed) << "\n";
+        // TODO: resistances
+        return UserChoice{ controller };
+    });
+    choice.emplace_back('q', "[Q]uit", []() -> battle::Action {
+        std::cout << "Goodbye!\n";
+        std::exit(0);
+        return {};
+    });
+
+    std::cout << "===\nWhat will " << controller.getEntity().getKind() << " do?\n";
+    for (auto&& [id, msg, fn] : choice)
+        std::cout << " - " <<  msg << "\n";
+    std::cout << "> ";
+
+    auto c = getInput<char>([&](auto c){
         for (auto&& [id, msg, fn] : choice)
-            if (std::tolower(c, std::locale{}) == id)
-                controller.choose(fn());
-    }
-};
+            if (std::tolower(c, std::locale{}) == id) return true;
+        return false;
+    });
+    for (auto&& [id, msg, fn] : choice)
+        if (std::tolower(c, std::locale{}) == id)
+            controller.choose(fn());
+}
+
+void printMessage(const battle::Message& m) {
+    using namespace battle::message;
+    std::visit(overload{
+        [](const SkillUsed& su) {
+            std::cout << su.source.getKind() << " used "
+                      << su.skill->getName() << " on "
+                      << su.target.getKind() << "!\n";
+        },
+        [](const PoolChanged& pc) {
+            auto diff = pc.new_value - pc.old_value;
+            std::string poolname = (pc.pool == battle::Pool::HP)
+                ? "HP" : ((pc.pool == battle::Pool::MP) ? "MP" : "Tech");
+            if (diff < 0) {
+                std::cout << pc.entity.getKind() << " lost "
+                          << -diff << " " << poolname << "!\n";
+            } else if (diff > 0) {
+                std::cout << pc.entity.getKind() << " restored "
+                          << diff << " " << poolname << "!\n";
+            } else {
+                std::cout << pc.entity.getKind() << "'s "
+                          << poolname << " remained unchanged.\n";
+            }
+        },
+        [](const Defended& d) {
+            std::cout << d.entity.getKind() << " is defending!\n";
+        },
+        [](const Fled& f) {
+            std::cout << f.entity.getKind() << " attempted to flee";
+            if (f.succeeded)
+                std::cout << ", and succeeded!\n";
+            else
+                std::cout << "... but failed.";
+        },
+        [](const Notification& n) {
+            std::cout << n.message << "\n";
+        }
+    }, m);
+}
 
 int main() {
     auto [blue, red] = init();
@@ -239,11 +254,10 @@ int main() {
 
     while (!system.isDone()) {
         battle::TurnInfo info = system.doTurn();
-        TurnDrawer drawer {
-            info.entity,
-            system,
-        };
-        std::visit(drawer, info.action);
+        for (const auto& m : info.messages)
+            printMessage(m);
+        if (info.need_user_input)
+            handleUserChoice(*info.controller, system);
     }
 
     std::cout << "Game over! Come back next time!\n" << std::flush;
