@@ -29,6 +29,11 @@ public:
     /// Destructor; needed for unique_ptr with abstract type
     ~Entity();
 
+    /// Disable copy construction
+    Entity(const Entity&) = delete;
+    /// Disable copy assignment
+    Entity& operator=(const Entity&) = delete;
+
     struct nest_controller_tag {};
 
     /// Set the (new) contoller for the entity

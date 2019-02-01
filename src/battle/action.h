@@ -13,6 +13,9 @@ namespace battle {
 class Entity;
 class PlayerController;
 
+
+/// Collate different action types
+/// TODO: make references pointers (or std::reference_wrapper)?
 namespace action {
 
     /// Enter defensive mode
@@ -26,8 +29,7 @@ namespace action {
     /// TODO: field-affecting skills (really should be their own thing, eh?)
     struct Skill {
         SkillRef skill;
-        Entity& target;
-        std::vector<Entity*> team;
+        const Entity& target;
     };
 
     /// Delegate control to a player; should be passed to the rendering system

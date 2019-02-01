@@ -34,6 +34,9 @@ struct TurnInfo {
 /// Manages and runs the battle; the game loop, if you will.
 class BattleSystem {
 public:
+    /// TODO: do I really want shared_ptr? -- this question can only
+    /// be resolved once I work out how I'm interfacing the battle system
+    /// with an outside game.
     using EntityRef = std::shared_ptr<Entity>;
 
     explicit BattleSystem();
@@ -59,8 +62,11 @@ public:
     }
 
     /// Get the entities that are part of the specified team.
-    [[nodiscard]] std::vector<Entity*> getTeam(Team team);
-    [[nodiscard]] std::vector<const Entity*> getTeam(Team team) const;
+    [[nodiscard]] std::vector<Entity*> getEntities(Team team);
+    [[nodiscard]] std::vector<const Entity*> getEntities(Team team) const;
+
+    /// Get the team the specified entity belongs to
+    Team getTeam(const Entity& e) const;
 
     /// Progress the battle.
     TurnInfo doTurn();

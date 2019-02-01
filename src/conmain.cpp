@@ -85,10 +85,10 @@ void drawEntity(const battle::Entity& entity) {
 void drawTeams(const battle::BattleSystem& system) {
     using battle::Team;
     std::cout << "\nBlue team:\n" << std::string(60, '=') << "\n";
-    for (auto entity : system.getTeam(Team::Blue))
+    for (auto entity : system.getEntities(Team::Blue))
         drawEntity(*entity);
     std::cout << "\nRed team:\n" << std::string(60, '=') << "\n";
-    for (auto entity : system.getTeam(Team::Red))
+    for (auto entity : system.getEntities(Team::Red))
         drawEntity(*entity);
     std::cout << "\n";
 }
@@ -98,15 +98,12 @@ void drawTeams(const battle::BattleSystem& system) {
 /// but for my purposes here (a test-bed) this works fine.
 struct TurnDrawer {
     TurnDrawer(const battle::Entity& entity,
-               const std::vector<battle::Entity*>& red_team,
-               const std::vector<battle::Entity*>& blue_team)
+               const battle::BattleSystem& system)
         : entity{ entity }
-        , red_team{ red_team }
-        , blue_team{ blue_team }
+        , system{ system }
     {}
     const battle::Entity& entity;
-    std::vector<battle::Entity*> red_team;
-    std::vector<battle::Entity*> blue_team;
+    const battle::BattleSystem& system;
 
     void operator()(battle::action::Defend) const noexcept {
         std::cout << entity.getKind() << " is defending!\n";
@@ -168,6 +165,9 @@ struct TurnDrawer {
                 // TODO: handle Spread::Self
                 std::cout << "Choose target:\n";
 
+                auto red_team = system.getEntities(battle::Team::Red);
+                auto blue_team = system.getEntities(battle::Team::Blue);
+
                 i = 0;
                 std::cout << "Red team:\n";
                 for (auto&& target : red_team) {
@@ -187,9 +187,8 @@ struct TurnDrawer {
                 auto target = (targetchoice <= red_team.size()) ?
                         red_team[targetchoice - 1]
                       : blue_team[targetchoice - red_team.size() - 1];
-                auto& team = (targetchoice <= red_team.size()) ? red_team : blue_team;
 
-                return Skill{ skill, *target, team };
+                return Skill{ skill, *target };
             });
         choice.emplace_back('i', "[I]nfo", [&controller](){
             using P = battle::Pool;
@@ -242,8 +241,7 @@ int main() {
         battle::TurnInfo info = system.doTurn();
         TurnDrawer drawer {
             info.entity,
-            system.getTeam(battle::Team::Red),
-            system.getTeam(battle::Team::Blue)
+            system,
         };
         std::visit(drawer, info.action);
     }
