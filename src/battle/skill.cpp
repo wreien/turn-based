@@ -1,6 +1,7 @@
 #include "skill.h"
 #include "skillhooks.h"
 #include "entity.h"
+#include "messages.h"
 #include <cmath>
 
 namespace battle {
@@ -34,24 +35,27 @@ bool Skill::isUsableBy(const Entity& source) const noexcept {
     return true;
 }
 
-void Skill::use(Entity& source,
+void Skill::use(MessageLogger& logger,
+                Entity& source,
                 Entity& target,
                 const std::vector<Entity*>& team
                 ) const noexcept
 {
+    logger.appendMessage(message::SkillUsed{ *this, source, target });
+
     for (const auto& hook : cost_hooks)
-        hook->pay(source);
+        hook->pay(logger, source);
 
     using S = skill::Spread;
     if (spread == S::Self || spread == S::Single) {
         if (source.isDead())
             return;
-        executeSkill(source, target, target);
+        executeSkill(logger, source, target, target);
     } else {
         for (auto&& entity : team) {
             if (source.isDead())
                 return;
-            executeSkill(source, *entity, target);
+            executeSkill(logger, source, *entity, target);
         }
     }
 
@@ -59,21 +63,22 @@ void Skill::use(Entity& source,
         return;
 
     for (const auto& hook : post_hooks)
-        hook->apply(source);
+        hook->apply(logger, source);
 }
 
-void Skill::executeSkill(Entity& source,
+void Skill::executeSkill(MessageLogger& logger,
+                         Entity& source,
                          Entity& target,
                          const Entity& orig
                          ) const noexcept
 {
     bool hit = true;
     for (const auto& hook : check_hooks)
-        if (!hook->didHit(source, target)) hit = false;
+        if (!hook->didHit(logger, source, target)) hit = false;
     if (hit) {
         double mod = 1;
         for (const auto& hook : mod_hooks) {
-            int m = hook->mod(source, target);
+            int m = hook->mod(logger, source, target);
             mod *= static_cast<double>(m + 100) / 100.0;
             mod = std::max(mod, 0.0);
         }
@@ -85,7 +90,7 @@ void Skill::executeSkill(Entity& source,
         }
 
         for (const auto& hook : effect_hooks)
-            hook->apply(source, target, mod);
+            hook->apply(logger, source, target, mod);
     }
 }
 

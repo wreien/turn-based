@@ -15,6 +15,7 @@ namespace battle {
 
 
 class Entity;
+class MessageLogger;
 
 namespace skill {
 
@@ -101,8 +102,7 @@ namespace skill {
             canPay(const Entity& source) const noexcept = 0;
 
         /// Make the entity pay the cost.
-        virtual void
-            pay(Entity& source) const noexcept = 0;
+        virtual void pay(MessageLogger& logger, Entity& source) const noexcept = 0;
     };
 
     /// Skill hook to determine if the skill hit a given target.
@@ -112,8 +112,8 @@ namespace skill {
         const HookID<CheckHook> id;
 
         /// Check if the skill hit the given target.
-        [[nodiscard]] virtual bool
-            didHit(const Entity& source, const Entity& target) const noexcept = 0;
+        [[nodiscard]] virtual bool didHit(MessageLogger& logger,
+               const Entity& source, const Entity& target) const noexcept = 0;
     };
 
     /// Skill hook to calculate damage modifiers for the skill.
@@ -125,8 +125,8 @@ namespace skill {
         /// Calculate the damage modifier for the skill.
         /// Should return an integer representing the percentage change;
         /// for example, 50 means "50% more damage".
-        [[nodiscard]] virtual int
-            mod(const Entity& source, const Entity& target) const noexcept = 0;
+        [[nodiscard]] virtual int mod(MessageLogger& logger,
+                const Entity& source, const Entity& target) const noexcept = 0;
     };
 
     /// Skill hook to actually do things.
@@ -141,8 +141,8 @@ namespace skill {
         /// Apply effects to the source and target.
         /// `mod` represents the overall damage multiplier
         /// (e.g. 1.2 means "20% more damage")
-        virtual void
-            apply(Entity& source, Entity& target, double mod) const noexcept = 0;
+        virtual void apply(MessageLogger& logger,
+                Entity& source, Entity& target, double mod) const noexcept = 0;
     };
 
     /// Skill hook to run after everything else is done.
@@ -153,11 +153,11 @@ namespace skill {
         const HookID<PostHook> id;
 
         /// Apply effects to the source after everything else is done.
-        /// This is a rather limited hook, as you don't really get any useful info.
-        /// TODO: for now? do we even need it?
-        virtual void apply(Entity& source) const noexcept = 0;
+        virtual void apply(MessageLogger& logger, Entity& source) const noexcept = 0;
     };
+
 }
+
 
 /// Encapsulates a skill
 class Skill {
@@ -179,7 +179,8 @@ public:
     [[nodiscard]] bool isUsableBy(const Entity& source) const noexcept;
 
     /// Process the effects of `source' using this skill on `target' with team `team'
-    void use(Entity& source, Entity& target,
+    /// Logs to `logger'
+    void use(MessageLogger& logger, Entity& source, Entity& target,
              const std::vector<Entity*>& team) const noexcept;
 
     /// Get the attack spread (AOE-ness) of the skill
@@ -264,7 +265,8 @@ private:
 
     /// Execute the skill with given source on the specified target.
     /// Also provides `orig' representing the original target (for AOE).
-    void executeSkill(Entity& source, Entity& target, const Entity& orig) const noexcept;
+    void executeSkill(MessageLogger& logger,
+            Entity& source, Entity& target, const Entity& orig) const noexcept;
 };
 
 

@@ -10,6 +10,7 @@
 #include "skill.h"
 #include "skillref.h"
 #include "stats.h"
+#include "messages.h"
 
 namespace battle {
 
@@ -92,19 +93,29 @@ public:
             return getStats().max_tech;
     }
 
+    /// Drain one of the entity's pools
+    /// Note that negative amounts are clamped; you cannot 'accidentally' heal
+    /// TODO: is this actually what we want?
     template <Pool pool>
-    void drain(Entity&, int amt) noexcept {
+    void drain(MessageLogger& logger, int amt) noexcept {
         auto& p = getPoolRef<pool>();
+        auto old = p;
         p -= std::max(amt, 0);
         if (p < 0) p = 0;
+        logger.appendMessage(message::PoolChanged{ *this, pool, old, p });
     }
 
+    /// Restore one of the entity's pools
+    /// Note that negative amounts are clamped; you cannot 'accidentally' heal
+    /// TODO: is this actually what we want?
     template <Pool pool>
-    void restore(Entity&, int amt) noexcept {
+    void restore(MessageLogger& logger, int amt) noexcept {
         auto& p = getPoolRef<pool>();
+        auto old = p;
         const auto s = getMax<pool>();
         p += std::max(amt, 0);
         if (p > s) p = s;
+        logger.appendMessage(message::PoolChanged{ *this, pool, old, p });
     }
 
     /// Retrieve the entity's skills after any modifiers have been applied

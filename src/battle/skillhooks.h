@@ -19,8 +19,8 @@ struct PoolCost : CostHook {
         return source.get<pool>() >= amt;
     }
 
-    void pay(Entity& source) const noexcept override {
-        source.drain<pool>(source, amt);
+    void pay(MessageLogger& logger, Entity& source) const noexcept override {
+        source.drain<pool>(logger, amt);
     }
 
     int amt;
@@ -41,13 +41,15 @@ struct HealEffect : EffectHook {
         , power{ power }
     {}
 
-    void apply(Entity& source, Entity& target, double mod) const noexcept override {
+    void apply(MessageLogger& logger,
+            Entity& source, Entity& target, double mod) const noexcept override
+    {
         auto source_stats = source.getStats();
 
         // TODO: balance :)
         double raw = power * (0.8 * source_stats.m_atk + 1.2 * source_stats.m_def);
         double heal = std::ceil(mod * raw);
-        target.restore<Pool::HP>(source, static_cast<int>(heal));
+        target.restore<Pool::HP>(logger, static_cast<int>(heal));
     }
 
     int power;
@@ -60,7 +62,9 @@ struct DamageEffect : EffectHook {
         , power{ power }
     {}
 
-    void apply(Entity& source, Entity& target, double mod) const noexcept override {
+    void apply(MessageLogger& logger,
+            Entity& source, Entity& target, double mod) const noexcept override
+    {
         auto source_stats = source.getStats();
         auto target_stats = target.getStats();
 
@@ -78,7 +82,7 @@ struct DamageEffect : EffectHook {
 
         double raw = std::max(4 * atk - 2 * def, 0);
         double dmg = power * raw * mod;
-        target.drain<Pool::HP>(source, static_cast<int>(dmg));
+        target.drain<Pool::HP>(logger, static_cast<int>(dmg));
     }
 
     int power;
