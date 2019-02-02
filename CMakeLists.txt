@@ -20,6 +20,7 @@ set(SOURCE_FILES
     src/battle/element.h
     src/battle/entity.cpp
     src/battle/entity.h
+    src/battle/messages.h
     src/battle/npccontroller.cpp
     src/battle/npccontroller.h
     src/battle/playercontroller.cpp
