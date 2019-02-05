@@ -31,6 +31,8 @@ set(SOURCE_FILES
     src/battle/skillref.h
     src/battle/stats.h
     src/battle/stats.cpp
+    src/battle/statuseffect.h
+    src/battle/statuseffect.cpp
     src/util.h
 )
 

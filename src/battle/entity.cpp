@@ -1,5 +1,7 @@
 #include "entity.h"
 #include "controller.h"
+#include "messages.h"
+#include <iterator>
 
 namespace battle {
 
@@ -81,7 +83,7 @@ Entity::Entity(const std::string& kind, int level)
     , hp{ stats.max_hp }
     , mp{ stats.max_mp }
     , tech{ stats.max_tech }
-    , mods{ }
+    , effects{ }
     , skills{ getEntitySkills(kind, level) }
     , controller{ std::make_unique<NullController>() }
 {
@@ -95,7 +97,7 @@ Entity::Entity(std::filesystem::path file)
     , hp{ stats.max_hp }
     , mp{ stats.max_mp }
     , tech{ stats.max_tech }
-    , mods{ }
+    , effects{ }
     , skills{ getEntitySkills(file) }
     , controller{ std::make_unique<NullController>() }
 {
@@ -112,12 +114,27 @@ std::vector<SkillRef> Entity::getSkills() const {
 Stats Entity::getStats() const noexcept {
     // TODO: apply equipment bonuses, etc.
     // TODO: cache results?
+    std::vector<StatModifier> mods;
+    for (auto&& e : effects) {
+        const auto& effect_mods = e.getMods();
+        std::copy(std::begin(effect_mods), std::end(effect_mods),
+                  std::back_inserter(mods));
+    }
+
     return calculateModifiedStats(stats, mods);
 }
 
 // TODO: cap/mod hp/mp/tech as appropriate
-void Entity::applyStatModifier(StatModifier s) {
-    mods.push_back(s);
+void Entity::applyStatusEffect(MessageLogger&, StatusEffect s) {
+    effects.push_back(std::move(s));
 }
+
+// TODO: cap/mod hp/mp/tech as appropriate
+void Entity::processTurnEnd(MessageLogger&) noexcept {
+    auto it = std::remove_if(std::begin(effects), std::end(effects),
+                             [](auto&& e){ return e.endTurn(); });
+    effects.erase(it, std::end(effects));
+}
+
 
 }

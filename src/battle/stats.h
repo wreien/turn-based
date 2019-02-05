@@ -68,6 +68,14 @@ enum class StatModType {
 /// Modifies a stat in some way
 /// TODO: everything `int`? `double`? `union`? template?
 struct StatModifier {
+    StatModifier(StatType stat, int modifier, StatModType type)
+        : stat{ stat }, resist{ Element::Neutral }, modifier{ modifier }, type{ type }
+    {}
+
+    StatModifier(Element resist, int modifier, StatModType type)
+        : stat{ StatType::resist }, resist{ resist }, modifier{ modifier }, type{ type }
+    {}
+
     StatType stat;     ///< the stat to modify
     Element resist;    ///< the resistance to modify (applicable iff stat == resist)
     int modifier;      ///< the modification
@@ -76,7 +84,7 @@ struct StatModifier {
 
 /// Apply a collection of stat modifiers to a stat block
 [[nodiscard]] Stats
-calculateModifiedStats(Stats s, std::vector<StatModifier> mods) noexcept;
+calculateModifiedStats(Stats s, const std::vector<StatModifier>& mods) noexcept;
 
 }
 

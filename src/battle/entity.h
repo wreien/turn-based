@@ -10,6 +10,7 @@
 #include "skill.h"
 #include "skillref.h"
 #include "stats.h"
+#include "statuseffect.h"
 #include "messages.h"
 
 namespace battle {
@@ -121,14 +122,17 @@ public:
     /// Retrieve the entity's skills after any modifiers have been applied
     [[nodiscard]] std::vector<SkillRef> getSkills() const;
 
-    /// Applies a status modification to the entity's base stats
+    /// Applies a status effect as part of the base stats
     /// TODO: provide some diff about how stats changed?
-    /// TODO: generalise for status effects
-    void applyStatModifier(StatModifier s);
+    void applyStatusEffect(MessageLogger& logger, StatusEffect s);
 
     [[nodiscard]] bool isDead() const noexcept {
         return hp <= 0;
     }
+
+    /// Handle any processes that happen after the entity's turn.
+    /// For example: buffs wearing off, poison damage, regen effects, etc.
+    void processTurnEnd(MessageLogger& logger) noexcept;
 
 private:
     template <Pool pool>
@@ -166,10 +170,8 @@ private:
     int mp;    ///< remaining magic
     int tech;  ///< remaining tech
 
-    /// Status modifiers
-    /// TODO time limits for mods?
-    /// TODO split into permanant/temporary?
-    std::vector<StatModifier> mods;
+    /// Status effects
+    std::vector<StatusEffect> effects;
 
     /// The skill the entity itself owns
     std::vector<Skill> skills;
