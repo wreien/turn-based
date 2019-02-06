@@ -11,12 +11,12 @@ StatusEffect::StatusEffect(std::string name_)
     // TODO: don't hardcode directly here :)
     if (name == "attack boost") {
         num_turns_remaining = 3;
-        mods.emplace_back(StatType::p_atk, 2, StatModType::additive);
-        mods.emplace_back(StatType::m_atk, 2, StatModType::additive);
+        mods.emplace_back(StatType::p_atk, 1, StatModType::additive);
+        mods.emplace_back(StatType::m_atk, 1, StatModType::additive);
     } else if (name == "defense break") {
         num_turns_remaining = 3;
-        mods.emplace_back(StatType::p_def, -2, StatModType::additive);
-        mods.emplace_back(StatType::m_def, -2, StatModType::additive);
+        mods.emplace_back(StatType::p_def, -1, StatModType::additive);
+        mods.emplace_back(StatType::m_def, -1, StatModType::additive);
     }
 }
 

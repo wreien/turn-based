@@ -56,6 +56,8 @@ namespace {
         std::vector<Skill> skills;
         skills.emplace_back("attack");
         skills.emplace_back("heal");
+        skills.emplace_back("attack boost");
+        skills.emplace_back("defense break");
         return skills;
     }
 

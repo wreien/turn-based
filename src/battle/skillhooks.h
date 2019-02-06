@@ -5,6 +5,7 @@
 #include <cmath>
 #include "skill.h"
 #include "entity.h"
+#include "statuseffect.h"
 
 namespace battle::skill {
 
@@ -86,6 +87,28 @@ struct DamageEffect : EffectHook {
     }
 
     int power;
+};
+
+// TODO: differentiate between effects targeted at enemies and retributive effects
+// TODO: more than one status effect? Is that something we want?
+struct ApplyStatusEffect : EffectHook {
+    template <typename... Args>
+    ApplyStatusEffect(Args&&... args)
+        : EffectHook{ "status" } // currently only one status effect per skill
+        , effect{ std::forward<Args>(args)... }
+    {}
+
+    // TODO: some sort of "luck" stat affecting chance of applying status effects?
+    // Do status effects get affected by elemental resistances?
+    void apply(MessageLogger& logger,
+               [[maybe_unused]] Entity& source, Entity& target,
+               [[maybe_unused]] double mod)
+        const noexcept override
+    {
+        target.applyStatusEffect(logger, effect);
+    }
+
+    StatusEffect effect;
 };
 
 

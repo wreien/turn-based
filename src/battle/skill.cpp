@@ -25,6 +25,12 @@ Skill::Skill(const std::string& name)
         addHook(HealEffect{ 2 });
     } else if (name == "attack") {
         addHook(DamageEffect<skill::Stats::Physical>{ 2 });
+    } else if (name == "attack boost") {
+        addHook(PoolCost<Pool::Tech>{ 1 });
+        addHook(ApplyStatusEffect{ "attack boost" });
+    } else if (name == "defense break") {
+        addHook(PoolCost<Pool::Tech>{ 1 });
+        addHook(ApplyStatusEffect{ "defense break" });
     }
 }
 
