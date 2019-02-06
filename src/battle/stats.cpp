@@ -46,6 +46,7 @@ Stats calculateModifiedStats(Stats s, const std::vector<StatModifier>& mods) noe
     for (unsigned i = 0; i < num_stat_types; i++) {
         performMod(static_cast<StatType>(i), [&](auto& stat) {
             stat *= stat_mult_sum[i] / 100.0 + 1.0;
+            stat = std::max(stat, 1);  // cannot have less than 1 in a stat
         });
     }
 
