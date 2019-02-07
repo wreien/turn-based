@@ -174,16 +174,27 @@ void handleUserChoice(battle::PlayerController& controller,
         battle::Stats s = e.getStats();
         std::cout << "Stats for " << e.getKind() << ":\n";
         std::cout
-            << "HP:     " << e.get<P::HP>() << "/" << e.getMax<P::HP>() << "\n"
-            << "MP:     " << e.get<P::MP>() << "/" << e.getMax<P::MP>() << "\n"
-            << "Tech:   " << e.get<P::Tech>() << "/" << e.getMax<P::Tech>() << "\n"
-            << "P. atk: " << printStat(s.p_atk) << "\n"
-            << "P. def: " << printStat(s.p_def) << "\n"
-            << "M. atk: " << printStat(s.m_atk) << "\n"
-            << "M. def: " << printStat(s.m_def) << "\n"
-            << "Skill:  " << printStat(s.skill) << "\n"
-            << "Evade:  " << printStat(s.evade) << "\n"
-            << "Speed:  " << printStat(s.speed) << "\n";
+            << "  - HP:     " << e.get<P::HP>() << "/" << e.getMax<P::HP>() << "\n"
+            << "  - MP:     " << e.get<P::MP>() << "/" << e.getMax<P::MP>() << "\n"
+            << "  - Tech:   " << e.get<P::Tech>() << "/" << e.getMax<P::Tech>() << "\n"
+            << "  - P. atk: " << printStat(s.p_atk) << "\n"
+            << "  - P. def: " << printStat(s.p_def) << "\n"
+            << "  - M. atk: " << printStat(s.m_atk) << "\n"
+            << "  - M. def: " << printStat(s.m_def) << "\n"
+            << "  - Skill:  " << printStat(s.skill) << "\n"
+            << "  - Evade:  " << printStat(s.evade) << "\n"
+            << "  - Speed:  " << printStat(s.speed) << "\n";
+        auto& effects = e.getAppliedStatusEffects();
+        if (!effects.empty()) {
+            std::cout << "Applied status effects:\n";
+            for (auto&& se : effects) {
+                std::cout << "  - " << se.getName();
+                auto duration = se.getRemainingTurns();
+                if (duration)
+                    std::cout << " (" << *duration << " turns remaining)";
+                std::cout << "\n";
+            }
+        }
         // TODO: resistances
         return UserChoice{ controller };
     });
@@ -229,6 +240,15 @@ void printMessage(const battle::Message& m) {
             } else {
                 std::cout << pc.entity.getKind() << "'s "
                           << poolname << " remained unchanged.\n";
+            }
+        },
+        [](const StatusEffect& e) {
+            if (e.applied) {
+                std::cout << e.entity.getKind() << " is now affected by "
+                          << e.effect << "!\n";
+            } else {
+                std::cout << e.entity.getKind() << "'s "
+                          << e.effect << " wore off.\n";
             }
         },
         [](const Defended& d) {

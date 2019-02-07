@@ -126,6 +126,11 @@ public:
     /// TODO: provide some diff about how stats changed?
     void applyStatusEffect(MessageLogger& logger, StatusEffect s);
 
+    /// Get the status effects currently afflicting the entity
+    [[nodiscard]] const auto& getAppliedStatusEffects() const noexcept {
+        return effects;
+    }
+
     [[nodiscard]] bool isDead() const noexcept {
         return hp <= 0;
     }

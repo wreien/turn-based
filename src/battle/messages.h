@@ -31,6 +31,14 @@ namespace message {
         int new_value;        ///< the new value of the pool
     };
 
+    /// An entity was afflicted or cured of a status effect
+    /// (I don't really want to pass the whole effect, but we don't really need it)
+    struct StatusEffect {
+        const Entity& entity; ///< the entity in question
+        std::string effect;   ///< the name of the effect (TODO: enum id?)
+        bool applied;         ///< whether the effect was applied or removed
+    };
+
     /// An enemy defended
     struct Defended {
         const Entity& entity;
@@ -53,6 +61,7 @@ namespace message {
 
 using Message = std::variant< message::SkillUsed
                             , message::PoolChanged
+                            , message::StatusEffect
                             , message::Defended
                             , message::Fled
                             , message::Notification

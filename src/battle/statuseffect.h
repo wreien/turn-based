@@ -22,7 +22,7 @@ public:
     /// TODO: status effect levels/tiers? use enum rather than string to identify?
     StatusEffect(std::string name);
 
-    [[nodiscard]] std::string_view getName() const noexcept {
+    [[nodiscard]] const std::string& getName() const noexcept {
         return name;
     }
 
@@ -34,8 +34,10 @@ public:
     [[nodiscard]] std::optional<int> getRemainingTurns() const noexcept;
 
     /// Call at the end of a turn.
-    /// Returns true if the status effect is over and should be removed.
-    [[nodiscard]] bool endTurn() noexcept;
+    void endTurn() noexcept;
+
+    /// Returns true if the status effect is still being applied
+    [[nodiscard]] bool isActive() const noexcept;
 
     // TODO: "classes" of status effects?
 

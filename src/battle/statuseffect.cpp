@@ -34,10 +34,13 @@ std::optional<int> StatusEffect::getRemainingTurns() const noexcept {
     return num_turns_remaining;
 }
 
-bool StatusEffect::endTurn() noexcept {
+void StatusEffect::endTurn() noexcept {
     if (num_turns_remaining > 0)
         num_turns_remaining--;
-    return num_turns_remaining == 0;
+}
+
+bool StatusEffect::isActive() const noexcept {
+    return num_turns_remaining != 0;
 }
 
 

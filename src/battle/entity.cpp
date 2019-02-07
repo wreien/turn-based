@@ -127,14 +127,27 @@ Stats Entity::getStats() const noexcept {
 }
 
 // TODO: cap/mod hp/mp/tech as appropriate
-void Entity::applyStatusEffect(MessageLogger&, StatusEffect s) {
-    effects.push_back(std::move(s));
+void Entity::applyStatusEffect(MessageLogger& logger, StatusEffect s) {
+    logger.appendMessage(message::StatusEffect{ *this, s.getName(), true });
+    effects.emplace_back(std::move(s));
 }
 
 // TODO: cap/mod hp/mp/tech as appropriate
-void Entity::processTurnEnd(MessageLogger&) noexcept {
-    auto it = std::remove_if(std::begin(effects), std::end(effects),
-                             [](auto&& e){ return e.endTurn(); });
+void Entity::processTurnEnd(MessageLogger& logger) noexcept {
+    // move effects being removed to the end
+    auto it = std::partition(std::begin(effects), std::end(effects), [](auto&& e) {
+        // TODO parse logger and don't call end turn on the effect if the effect
+        // was just applied (should make more natural durations for effects)
+        e.endTurn();
+        return e.isActive();
+    });
+    // process effects being removed
+    std::for_each(it, std::end(effects), [&](auto&& e) {
+        logger.appendMessage(message::StatusEffect{
+            *this, e.getName(), false
+        });
+    });
+    // remove effects being, uh, removed
     effects.erase(it, std::end(effects));
 }
 
