@@ -212,9 +212,10 @@ public:
     template <typename Hook>
     void removeHook(skill::HookID<Hook> id) {
         auto& hook_list = getHookList<Hook>();
-        auto to_erase = std::remove_if(   // reminder: remove_if is a terrible name
+        // does hook order matter? Just in case doing stable partition; rethink later
+        auto to_erase = std::stable_partition(
             std::begin(hook_list), std::end(hook_list),
-            [id](auto&& hook) { return hook->id == id; }
+            [id](auto&& hook) { return hook->id != id; }
         );
         // TODO: handle this more nicely than sticking it awkwardly in here
         if constexpr (std::is_same_v<skill::EffectHook, Hook>) {
