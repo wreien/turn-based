@@ -38,7 +38,7 @@ BattleSystem::BattleSystem(const std::vector<EntityRef>& blues,
 }
 
 
-std::vector<Entity*> BattleSystem::getTeam(Team team) {
+std::vector<Entity*> BattleSystem::getEntities(Team team) {
     std::vector<Entity*> entities;
     for (auto&& c : combatants)
         if (c.team == team)
@@ -46,12 +46,22 @@ std::vector<Entity*> BattleSystem::getTeam(Team team) {
     return entities;
 }
 
-std::vector<const Entity*> BattleSystem::getTeam(Team team) const {
+std::vector<const Entity*> BattleSystem::getEntities(Team team) const {
     std::vector<const Entity*> entities;
     for (auto&& c : combatants)
         if (c.team == team)
             entities.push_back(c.entity.get());
     return entities;
+}
+
+Team BattleSystem::getTeam(const Entity& e) const {
+    auto it = std::find_if(
+        std::begin(combatants), std::end(combatants),
+        [&e](auto&& c){ return c.entity.get() == &e; }
+    );
+    if (it == std::end(combatants))
+        throw std::invalid_argument("BattleSystem::getTeam: entity not found");
+    return it->team;
 }
 
 
@@ -86,37 +96,60 @@ void BattleSystem::gotoNextTurn() {
 // Actually run the game
 
 TurnInfo BattleSystem::doTurn() {
+    MessageLogger logger;
+    TurnInfo info { false, nullptr, {} };
+
     auto& c = combatants[*current_turn];
     auto& controller = c.entity->getController();
 
     BattleView view {
-        getTeam(c.team == Team::Blue ? Team::Blue : Team::Red),
-        getTeam(c.team == Team::Blue ? Team::Red : Team::Blue)
+        getEntities(c.team == Team::Blue ? Team::Blue : Team::Red),
+        getEntities(c.team == Team::Blue ? Team::Red : Team::Blue)
     };
 
     Action act = controller.go(view);
 
-    bool turnFinished = true;
+    bool turnFinished = false;
     std::visit(overload{
         [&](action::Defend){
             // at this stage, do nothing ;)
+            logger.appendMessage(message::Defended{ *c.entity });
+            turnFinished = true;
         },
         [&](action::Flee){
             // at this stage, do nothing ;)
-            turnFinished = false;
+            logger.appendMessage(message::Fled{ *c.entity, true });
+            turnFinished = true;
         },
         [&](action::Skill& s){
             // TODO: get the results
-            s.skill->use(*c.entity, s.target, s.team);
+            auto it = std::find_if(
+                std::begin(combatants), std::end(combatants),
+                [&s](auto&& c){ return c.entity.get() == &s.target; }
+            );
+            if (it != std::end(combatants)) {
+                s.skill->use(logger, *c.entity, *it->entity, getEntities(it->team));
+                turnFinished = true;
+            } else {
+                throw std::invalid_argument(
+                        "BattleSystem::doTurn/Skill: entity not found");
+            }
         },
-        [&](action::UserChoice){
+        [&](action::UserChoice user) {
+            info.need_user_input = true;
+            info.controller = &user.controller;
             turnFinished = false;
         }
     }, act);
 
-    if (turnFinished)
+    if (turnFinished) {
+        if (!c.entity->isDead())
+            c.entity->processTurnEnd(logger);
         gotoNextTurn();
-    return { act, *c.entity, c.team };
+    }
+
+    info.messages = logger.pop();
+    return info;
 }
 
 bool BattleSystem::isDone() const {

@@ -5,6 +5,7 @@
 #include <cmath>
 #include "skill.h"
 #include "entity.h"
+#include "statuseffect.h"
 
 namespace battle::skill {
 
@@ -19,8 +20,8 @@ struct PoolCost : CostHook {
         return source.get<pool>() >= amt;
     }
 
-    void pay(Entity& source) const noexcept override {
-        source.drain<pool>(source, amt);
+    void pay(MessageLogger& logger, Entity& source) const noexcept override {
+        source.drain<pool>(logger, amt);
     }
 
     int amt;
@@ -41,13 +42,15 @@ struct HealEffect : EffectHook {
         , power{ power }
     {}
 
-    void apply(Entity& source, Entity& target, double mod) const noexcept override {
+    void apply(MessageLogger& logger,
+            Entity& source, Entity& target, double mod) const noexcept override
+    {
         auto source_stats = source.getStats();
-        (void)target; // unused
 
         // TODO: balance :)
-        double amt = power * (0.8 * source_stats.m_atk + 1.2 * source_stats.m_def);
-        target.restore<Pool::HP>(source, std::ceil(mod * amt * 0.3));
+        double raw = power * (0.8 * source_stats.m_atk + 1.2 * source_stats.m_def);
+        double heal = std::ceil(mod * raw);
+        target.restore<Pool::HP>(logger, static_cast<int>(heal));
     }
 
     int power;
@@ -60,21 +63,52 @@ struct DamageEffect : EffectHook {
         , power{ power }
     {}
 
-    void apply(Entity& source, Entity& target, double mod) const noexcept override {
+    void apply(MessageLogger& logger,
+            Entity& source, Entity& target, double mod) const noexcept override
+    {
         auto source_stats = source.getStats();
         auto target_stats = target.getStats();
 
         static_assert(stats == Stats::Physical || stats == Stats::Magical);
 
-        double amt = power;
-        if constexpr (stats == Stats::Physical)
-            amt *= 4.0 * source_stats.p_atk - 2.0 * target_stats.p_def;
-        else if constexpr (stats == Stats::Magical)
-            amt *= 4.0 * source_stats.m_atk - 2.8 * target_stats.m_def;
-        target.drain<Pool::HP>(source, mod * amt);
+        int atk = 0;
+        int def = 0;
+        if constexpr (stats == Stats::Physical) {
+            atk = source_stats.p_atk;
+            def = target_stats.p_def;
+        } else if constexpr (stats == Stats::Magical) {
+            atk = source_stats.m_atk;
+            def = target_stats.m_def;
+        }
+
+        double raw = std::max(4 * atk - 2 * def, 0);
+        double dmg = power * raw * mod;
+        target.drain<Pool::HP>(logger, static_cast<int>(dmg));
     }
 
     int power;
+};
+
+// TODO: differentiate between effects targeted at enemies and retributive effects
+// TODO: more than one status effect? Is that something we want?
+struct ApplyStatusEffect : EffectHook {
+    template <typename... Args>
+    ApplyStatusEffect(Args&&... args)
+        : EffectHook{ "status" } // currently only one status effect per skill
+        , effect{ std::forward<Args>(args)... }
+    {}
+
+    // TODO: some sort of "luck" stat affecting chance of applying status effects?
+    // Do status effects get affected by elemental resistances?
+    void apply(MessageLogger& logger,
+               [[maybe_unused]] Entity& source, Entity& target,
+               [[maybe_unused]] double mod)
+        const noexcept override
+    {
+        target.applyStatusEffect(logger, effect);
+    }
+
+    StatusEffect effect;
 };
 
 

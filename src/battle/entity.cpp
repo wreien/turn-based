@@ -1,5 +1,7 @@
 #include "entity.h"
 #include "controller.h"
+#include "messages.h"
+#include <iterator>
 
 namespace battle {
 
@@ -10,7 +12,7 @@ namespace {
         // The raddest scaling you'll ever see
         if (kind.find("good") != std::string::npos) {
             return {
-                5 * level,  // hp
+                35 * level, // hp
                 2 * level,  // mp
                 10,         // tech
                 3 * level,  // p_atk
@@ -24,7 +26,7 @@ namespace {
             };
         } else if (kind.find("evil") != std::string::npos) {
             return {
-                3 * level,  // hp
+                27 * level, // hp
                 3 * level,  // mp
                 10,         // tech
                 2 * level,  // p_atk
@@ -54,6 +56,8 @@ namespace {
         std::vector<Skill> skills;
         skills.emplace_back("attack");
         skills.emplace_back("heal");
+        skills.emplace_back("attack boost");
+        skills.emplace_back("defense break");
         return skills;
     }
 
@@ -81,7 +85,7 @@ Entity::Entity(const std::string& kind, int level)
     , hp{ stats.max_hp }
     , mp{ stats.max_mp }
     , tech{ stats.max_tech }
-    , mods{ }
+    , effects{ }
     , skills{ getEntitySkills(kind, level) }
     , controller{ std::make_unique<NullController>() }
 {
@@ -95,7 +99,7 @@ Entity::Entity(std::filesystem::path file)
     , hp{ stats.max_hp }
     , mp{ stats.max_mp }
     , tech{ stats.max_tech }
-    , mods{ }
+    , effects{ }
     , skills{ getEntitySkills(file) }
     , controller{ std::make_unique<NullController>() }
 {
@@ -112,12 +116,40 @@ std::vector<SkillRef> Entity::getSkills() const {
 Stats Entity::getStats() const noexcept {
     // TODO: apply equipment bonuses, etc.
     // TODO: cache results?
+    std::vector<StatModifier> mods;
+    for (auto&& e : effects) {
+        const auto& effect_mods = e.getMods();
+        std::copy(std::begin(effect_mods), std::end(effect_mods),
+                  std::back_inserter(mods));
+    }
+
     return calculateModifiedStats(stats, mods);
 }
 
 // TODO: cap/mod hp/mp/tech as appropriate
-void Entity::applyStatModifier(StatModifier s) {
-    mods.push_back(s);
+void Entity::applyStatusEffect(MessageLogger& logger, StatusEffect s) {
+    logger.appendMessage(message::StatusEffect{ *this, s.getName(), true });
+    effects.emplace_back(std::move(s));
 }
+
+// TODO: cap/mod hp/mp/tech as appropriate
+void Entity::processTurnEnd(MessageLogger& logger) noexcept {
+    // move effects being removed to the end
+    auto it = std::partition(std::begin(effects), std::end(effects), [](auto&& e) {
+        // TODO parse logger and don't call end turn on the effect if the effect
+        // was just applied (should make more natural durations for effects)
+        e.endTurn();
+        return e.isActive();
+    });
+    // process effects being removed
+    std::for_each(it, std::end(effects), [&](auto&& e) {
+        logger.appendMessage(message::StatusEffect{
+            *this, e.getName(), false
+        });
+    });
+    // remove effects being, uh, removed
+    effects.erase(it, std::end(effects));
+}
+
 
 }

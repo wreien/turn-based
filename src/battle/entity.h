@@ -10,6 +10,8 @@
 #include "skill.h"
 #include "skillref.h"
 #include "stats.h"
+#include "statuseffect.h"
+#include "messages.h"
 
 namespace battle {
 
@@ -28,6 +30,11 @@ public:
 
     /// Destructor; needed for unique_ptr with abstract type
     ~Entity();
+
+    /// Disable copy construction
+    Entity(const Entity&) = delete;
+    /// Disable copy assignment
+    Entity& operator=(const Entity&) = delete;
 
     struct nest_controller_tag {};
 
@@ -87,32 +94,50 @@ public:
             return getStats().max_tech;
     }
 
+    /// Drain one of the entity's pools
+    /// Note that negative amounts are clamped; you cannot 'accidentally' heal
+    /// TODO: is this actually what we want?
     template <Pool pool>
-    void drain(Entity&, int amt) noexcept {
+    void drain(MessageLogger& logger, int amt) noexcept {
         auto& p = getPoolRef<pool>();
+        auto old = p;
         p -= std::max(amt, 0);
         if (p < 0) p = 0;
+        logger.appendMessage(message::PoolChanged{ *this, pool, old, p });
     }
 
+    /// Restore one of the entity's pools
+    /// Note that negative amounts are clamped; you cannot 'accidentally' heal
+    /// TODO: is this actually what we want?
     template <Pool pool>
-    void restore(Entity&, int amt) noexcept {
+    void restore(MessageLogger& logger, int amt) noexcept {
         auto& p = getPoolRef<pool>();
+        auto old = p;
         const auto s = getMax<pool>();
         p += std::max(amt, 0);
         if (p > s) p = s;
+        logger.appendMessage(message::PoolChanged{ *this, pool, old, p });
     }
 
     /// Retrieve the entity's skills after any modifiers have been applied
     [[nodiscard]] std::vector<SkillRef> getSkills() const;
 
-    /// Applies a status modification to the entity's base stats
+    /// Applies a status effect as part of the base stats
     /// TODO: provide some diff about how stats changed?
-    /// TODO: generalise for status effects
-    void applyStatModifier(StatModifier s);
+    void applyStatusEffect(MessageLogger& logger, StatusEffect s);
+
+    /// Get the status effects currently afflicting the entity
+    [[nodiscard]] const auto& getAppliedStatusEffects() const noexcept {
+        return effects;
+    }
 
     [[nodiscard]] bool isDead() const noexcept {
         return hp <= 0;
     }
+
+    /// Handle any processes that happen after the entity's turn.
+    /// For example: buffs wearing off, poison damage, regen effects, etc.
+    void processTurnEnd(MessageLogger& logger) noexcept;
 
 private:
     template <Pool pool>
@@ -150,10 +175,8 @@ private:
     int mp;    ///< remaining magic
     int tech;  ///< remaining tech
 
-    /// Status modifiers
-    /// TODO time limits for mods?
-    /// TODO split into permanant/temporary?
-    std::vector<StatModifier> mods;
+    /// Status effects
+    std::vector<StatusEffect> effects;
 
     /// The skill the entity itself owns
     std::vector<Skill> skills;

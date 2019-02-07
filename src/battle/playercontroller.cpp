@@ -1,6 +1,7 @@
 #include "playercontroller.h"
 #include "entity.h"
 #include "../util.h"
+#include <algorithm>
 
 namespace battle {
 
@@ -18,7 +19,16 @@ Action PlayerController::go(const BattleView&) {
 }
 
 UserOptions PlayerController::options() const {
-    return { true, true, entity.getSkills() };
+    auto skills = entity.getSkills();
+    skills.erase(std::remove_if(
+        std::begin(skills), std::end(skills),
+        [&](auto&& s){ return !s->isUsableBy(entity); }
+    ), std::end(skills));
+    return {
+        true,
+        true,
+        skills
+    };
 }
 
 void PlayerController::choose(const Action& act) {

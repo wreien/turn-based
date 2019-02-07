@@ -20,6 +20,7 @@ set(SOURCE_FILES
     src/battle/element.h
     src/battle/entity.cpp
     src/battle/entity.h
+    src/battle/messages.h
     src/battle/npccontroller.cpp
     src/battle/npccontroller.h
     src/battle/playercontroller.cpp
@@ -30,6 +31,8 @@ set(SOURCE_FILES
     src/battle/skillref.h
     src/battle/stats.h
     src/battle/stats.cpp
+    src/battle/statuseffect.h
+    src/battle/statuseffect.cpp
     src/util.h
 )
 

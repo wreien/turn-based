@@ -3,7 +3,7 @@
 namespace battle {
 
 
-Stats calculateModifiedStats(Stats s, std::vector<StatModifier> mods) noexcept {
+Stats calculateModifiedStats(Stats s, const std::vector<StatModifier>& mods) noexcept {
     static constexpr auto num_stat_types =
         static_cast<unsigned>(StatType::resist);
     std::array<int, num_stat_types> stat_mult_sum = { 0 };
@@ -46,6 +46,7 @@ Stats calculateModifiedStats(Stats s, std::vector<StatModifier> mods) noexcept {
     for (unsigned i = 0; i < num_stat_types; i++) {
         performMod(static_cast<StatType>(i), [&](auto& stat) {
             stat *= stat_mult_sum[i] / 100.0 + 1.0;
+            stat = std::max(stat, 1);  // cannot have less than 1 in a stat
         });
     }
 
