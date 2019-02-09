@@ -11,6 +11,7 @@
 #include "battle/entity.h"
 #include "battle/npccontroller.h"
 #include "battle/playercontroller.h"
+#include "conutil.h"
 #include "util.h"
 
 // TODO: do these actually work on Windows? This is so dodgy...
@@ -292,6 +293,9 @@ void printMessage(const battle::Message& m) {
 }
 
 int main() {
+    if (!enableVtEscapeCodes())
+        return -1;
+
     auto [blue, red] = init();
     battle::BattleSystem system(blue, red);
     drawTeams(system);

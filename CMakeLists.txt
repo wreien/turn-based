@@ -39,6 +39,8 @@ set(SOURCE_FILES
 if(RENDERER STREQUAL "console")
     list(APPEND SOURCE_FILES
         src/conmain.cpp
+		src/conutil.h
+		src/conutil.cpp
     )
 else()
     list(APPEND SOURCE_FILES
