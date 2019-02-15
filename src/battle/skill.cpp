@@ -2,7 +2,10 @@
 #include "skillhooks.h"
 #include "entity.h"
 #include "messages.h"
+#include "statuseffect.h"
+#include "../util.h"
 #include <cmath>
+#include <numeric>
 
 namespace battle {
 
@@ -11,8 +14,6 @@ using namespace skill;
 Skill::Skill(const std::string& name)
     : name{ name }
     , spread{ Spread::Single }
-    , power_sources{ }
-    , accuracy_sources{ }
     , cost_hooks{ }
     , check_hooks{ }
     , mod_hooks{ }
@@ -24,13 +25,13 @@ Skill::Skill(const std::string& name)
         addHook(PoolCost<Pool::MP>{ 1 });
         addHook(HealEffect{ 2 });
     } else if (name == "attack") {
-        addHook(DamageEffect<skill::Stats::Physical>{ 2 });
+        addHook(DamageEffect<Method::Physical>{ 2 });
     } else if (name == "attack boost") {
         addHook(PoolCost<Pool::Tech>{ 1 });
-        addHook(ApplyStatusEffect{ "attack boost" });
+        addHook(ApplyStatusEffect{ StatusEffectId::AttackBoost });
     } else if (name == "defense break") {
         addHook(PoolCost<Pool::Tech>{ 1 });
-        addHook(ApplyStatusEffect{ "defense break" });
+        addHook(ApplyStatusEffect{ StatusEffectId::DefenseBreak });
     }
 }
 
@@ -104,25 +105,89 @@ Spread Skill::getSpread() const noexcept {
     return spread;
 }
 
+Method Skill::getMethod() const noexcept {
+    auto method = Method::Neither;
+    for (auto&& hook : effect_hooks) {
+        auto opt = hook->getMethod();
+        method = opt.value_or(method);
+    }
+    return method;
+}
+
 // TODO: if needed, cache results? (this is also goes for getAccuracy)
 // I don't expect it to be an issue, though, since it's unlikely for any skill
 // to have more than one or two power/accuracy checks
 std::optional<int> Skill::getPower() const noexcept {
-    if (std::empty(power_sources))
-        return std::nullopt;
+    bool has_power = false;
     int power = 0;
-    for (auto&& entry : power_sources)
-        power += entry.second;
-    return power;
+
+    for (auto&& hook : effect_hooks) {
+        if (auto opt = hook->getPower()) {
+            power += *opt;
+            has_power = true;
+        }
+    }
+
+    if (has_power)
+        return power;
+    return std::nullopt;
 }
 
 std::optional<int> Skill::getAccuracy() const noexcept {
-    if (std::empty(accuracy_sources))
-        return std::nullopt;
+    bool has_accuracy = false;
     double accuracy = 1;
-    for (auto&& entry : accuracy_sources)
-        accuracy *= static_cast<double>(entry.second) / 100.0;
-    return static_cast<int>(std::round(accuracy * 100.0));
+
+    // TODO: fixed point calculations, maybe?
+    // (will that even matter)
+    for (auto&& hook : check_hooks) {
+        if (auto opt = hook->getAccuracy()) {
+            accuracy *= static_cast<double>(*opt) / 100.0;
+            has_accuracy = true;
+        }
+    }
+
+    if (has_accuracy)
+        return static_cast<int>(std::round(accuracy * 100.0));
+    return std::nullopt;
+}
+
+Element Skill::getElement() const noexcept {
+    auto element = Element::Neutral;
+    // OK, this is *slightly* ridiculous ;)
+    for (auto&& hook : mod_hooks)
+        if (auto var = hook->getDescription(); auto pe = std::get_if<Element>(&var))
+            element = *pe;
+    return element;
+}
+
+std::string Skill::getCostDescription() const noexcept {
+    using namespace std::string_literals;
+
+    auto fn = [](std::string acc, const std::unique_ptr<CostHook>& hook) {
+        auto m = hook->getMessage();
+        auto e = std::empty(acc);
+        if (std::empty(m))
+            return acc;
+        return std::move(acc) + (e ? ""s : " + "s) + std::move(m);
+    };
+
+    auto cost = std::accumulate(std::begin(cost_hooks), std::end(cost_hooks), ""s, fn);
+    return std::empty(cost) ? "None"s : cost;
+}
+
+std::vector<std::string> Skill::getModifierDescriptions() const noexcept {
+    std::vector<std::string> descriptions;
+    for (auto&& hook : mod_hooks)
+        if (auto x = hook->getDescription(); auto ps = std::get_if<std::string>(&x))
+            descriptions.push_back(*ps);
+    return descriptions;
+}
+
+std::vector<std::string> Skill::getUseEffectDescriptions() const noexcept {
+    std::vector<std::string> descriptions;
+    for (auto&& hook : post_hooks)
+        descriptions.push_back(hook->getMessage());
+    return descriptions;
 }
 
 

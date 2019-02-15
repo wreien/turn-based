@@ -135,13 +135,35 @@ void handleUserChoice(battle::PlayerController& controller,
 
             int i = 0;
             for (auto&& skill : options.skills) {
-                auto power = skill->getPower();
-                auto accuracy = skill->getAccuracy();
                 std::cout << bold_colour << "  " << ++i << ". " << reset_colour
                           << yellow_colour << skill->getName() << reset_colour;
-                if (power) std::cout << " | power = " << *power;
-                if (accuracy) std::cout << " | accuracy = " << *accuracy;
+
+                std::cout << " | elementid = "
+                          << static_cast<int>(skill->getElement());
+
+                if (auto power = skill->getPower())
+                    std::cout << " | power = " << *power;
+                if (auto accuracy = skill->getAccuracy())
+                    std::cout << " | accuracy = " << *accuracy;
+
+                {
+                    std::cout << " | method = ";
+                    using battle::skill::Method;
+                    switch (skill->getMethod()) {
+                    case Method::Physical: std::cout << "physical"; break;
+                    case Method::Magical:  std::cout << "magical";  break;
+                    case Method::Neither:  std::cout << "status";   break;
+                    }
+                }
+
+                std::cout << " | cost = " << skill->getCostDescription();
+
                 std::cout << "\n";
+
+                for (auto&& desc : skill->getModifierDescriptions())
+                    std::cout << "      - " << desc << "\n";
+                for (auto&& desc : skill->getUseEffectDescriptions())
+                    std::cout << "      - " << desc << "\n";
             }
             std::cout << bold_colour << "> " << reset_colour;
 

@@ -1,22 +1,34 @@
 #include "statuseffect.h"
 
+
 namespace battle {
 
 
-StatusEffect::StatusEffect(std::string name_)
-    : name{ std::move(name_) }
+using S = StatusEffectId;
+
+StatusEffect::StatusEffect(StatusEffectId id)
+    : id{ id }
     , num_turns_remaining{ 0 }
     , mods{ }
 {
     // TODO: don't hardcode directly here :)
-    if (name == "attack boost") {
+    switch (id) {
+    case S::AttackBoost:
         num_turns_remaining = 3;
         mods.emplace_back(StatType::p_atk, 1, StatModType::additive);
         mods.emplace_back(StatType::m_atk, 1, StatModType::additive);
-    } else if (name == "defense break") {
+        break;
+    case S::DefenseBreak:
         num_turns_remaining = 3;
         mods.emplace_back(StatType::p_def, -1, StatModType::additive);
         mods.emplace_back(StatType::m_def, -1, StatModType::additive);
+    }
+}
+
+std::string StatusEffect::getName() const noexcept {
+    switch (id) {
+    case S::AttackBoost:  return "attack boost";
+    case S::DefenseBreak: return "defense break";
     }
 }
 
