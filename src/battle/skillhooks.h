@@ -12,7 +12,7 @@ namespace battle::skill {
 template <battle::Pool pool>
 struct PoolCost : CostHook {
     PoolCost(int amt)
-        : CostHook{ "pool" + std::to_string(static_cast<int>(pool) + 1) }
+        : CostHook{{ "pool" + to_string(pool) }}
         , amt{ amt }
     {}
 
@@ -24,6 +24,11 @@ struct PoolCost : CostHook {
         source.drain<pool>(logger, amt);
     }
 
+    std::string getMessage() const noexcept override {
+        using std::to_string;
+        return to_string(amt) + " " + to_string(pool);
+    }
+
     int amt;
 };
 
@@ -31,14 +36,9 @@ struct PoolCost : CostHook {
 // Effects
 // =============================================================
 
-enum class Stats {
-    Physical,
-    Magical,
-};
-
 struct HealEffect : EffectHook {
     HealEffect(int power)
-        : EffectHook{ "heal" }
+        : EffectHook{{ "heal" }}
         , power{ power }
     {}
 
@@ -53,13 +53,23 @@ struct HealEffect : EffectHook {
         target.restore<Pool::HP>(logger, static_cast<int>(heal));
     }
 
+    std::optional<int> getPower() const noexcept override {
+        return power;
+    }
+
+    std::optional<Method> getMethod() const noexcept override {
+        return Method::Magical;
+    }
+
     int power;
 };
 
-template <Stats stats>
+template <Method method>
 struct DamageEffect : EffectHook {
+    static_assert(method == Method::Physical || method == Method::Magical);
+
     DamageEffect(int power)
-        : EffectHook{ std::string("damage") + (stats == Stats::Physical ? "P" : "M") }
+        : EffectHook{{ std::string("dmg") + (method == Method::Physical ? "P" : "M") }}
         , power{ power }
     {}
 
@@ -69,14 +79,14 @@ struct DamageEffect : EffectHook {
         auto source_stats = source.getStats();
         auto target_stats = target.getStats();
 
-        static_assert(stats == Stats::Physical || stats == Stats::Magical);
+        static_assert(method == Method::Physical || method == Method::Magical);
 
         int atk = 0;
         int def = 0;
-        if constexpr (stats == Stats::Physical) {
+        if constexpr (method == Method::Physical) {
             atk = source_stats.p_atk;
             def = target_stats.p_def;
-        } else if constexpr (stats == Stats::Magical) {
+        } else if constexpr (method == Method::Magical) {
             atk = source_stats.m_atk;
             def = target_stats.m_def;
         }
@@ -86,16 +96,23 @@ struct DamageEffect : EffectHook {
         target.drain<Pool::HP>(logger, static_cast<int>(dmg));
     }
 
+    std::optional<int> getPower() const noexcept override {
+        return power;
+    }
+
+    std::optional<Method> getMethod() const noexcept override {
+        return method;
+    }
+
     int power;
 };
 
 // TODO: differentiate between effects targeted at enemies and retributive effects
 // TODO: more than one status effect? Is that something we want?
 struct ApplyStatusEffect : EffectHook {
-    template <typename... Args>
-    ApplyStatusEffect(Args&&... args)
-        : EffectHook{ "status" } // currently only one status effect per skill
-        , effect{ std::forward<Args>(args)... }
+    ApplyStatusEffect(StatusEffectId id)
+        : EffectHook{{ "status" }} // currently only one status effect per skill
+        , effect{ id }
     {}
 
     // TODO: some sort of "luck" stat affecting chance of applying status effects?
@@ -105,10 +122,13 @@ struct ApplyStatusEffect : EffectHook {
                [[maybe_unused]] double mod)
         const noexcept override
     {
-        target.applyStatusEffect(logger, effect);
+        target.applyStatusEffect(logger, StatusEffect{ effect });
     }
 
-    StatusEffect effect;
+    // no power
+    // no method
+
+    StatusEffectId effect;
 };
 
 

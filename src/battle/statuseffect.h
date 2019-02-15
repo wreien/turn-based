@@ -17,20 +17,36 @@ enum class EffectDuration {
     Temporary,  ///< lasts for a certain number of turns
 };
 
+enum class StatusEffectId {
+    AttackBoost,
+    DefenseBreak,
+};
+
+/// Representation of a status effect applied to an entity
+///
+/// An effect has a type (StatusEffectId) and a duration (EffectDuration);
+/// the type determines the duration. Status effects are both effects that
+/// manipulate an entity's pools (regen, poison, etc.) and effects that
+/// manipulates an entity's stats.
 class StatusEffect {
 public:
-    /// TODO: status effect levels/tiers? use enum rather than string to identify?
-    StatusEffect(std::string name);
+    /// Get the status effect for the given identifier.
+    /// TODO: add tiers of status effects? allow strength/duration boosts, etc?
+    StatusEffect(StatusEffectId id);
 
-    [[nodiscard]] const std::string& getName() const noexcept {
-        return name;
-    }
+    /// Get the display name for the status effect.
+    [[nodiscard]] std::string getName() const noexcept;
 
+    /// Get the status modifiers applied by the effect.
     [[nodiscard]] const std::vector<StatModifier>& getMods() const noexcept {
         return mods;
     }
 
+    /// Get the duration category for the status effect.
     [[nodiscard]] EffectDuration getEffectDuration() const noexcept;
+
+    /// Get the number of turns left for the status effect, if applicable.
+    /// (See getEffectDuration)
     [[nodiscard]] std::optional<int> getRemainingTurns() const noexcept;
 
     /// Call at the end of a turn.
@@ -39,12 +55,10 @@ public:
     /// Returns true if the status effect is still being applied
     [[nodiscard]] bool isActive() const noexcept;
 
-    // TODO: "classes" of status effects?
-
 private:
-    std::string name;                   ///< the name of the effect
-    int num_turns_remaining;            ///< the number of turns remaining
-    std::vector<StatModifier> mods;     ///< the stat modifiers in the effect
+    StatusEffectId id;              ///< the type of effect
+    int num_turns_remaining;        ///< the number of turns remaining
+    std::vector<StatModifier> mods; ///< the stat modifiers in the effect
 };
 
 

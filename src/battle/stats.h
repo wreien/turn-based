@@ -44,6 +44,14 @@ enum class Pool {
     Tech,  ///< tech pool
 };
 
+inline std::string to_string(Pool pool) noexcept {
+    switch (pool) {
+    case Pool::HP: return "HP";
+    case Pool::MP: return "MP";
+    case Pool::Tech: return "Tech";
+    }
+}
+
 /// Lists all the different options for a stat modifier
 enum class StatType {
     hp,     ///< max health

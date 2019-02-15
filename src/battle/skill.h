@@ -2,14 +2,13 @@
 #define BATTLE_SKILL_H_INCLUDED
 
 #include <string>
-#include <string_view>
 #include <optional>
 #include <memory>
 #include <vector>
-#include <unordered_map>
 #include <type_traits>
 #include <algorithm>
-#include "stats.h"
+#include <variant>
+#include "element.h"
 
 namespace battle {
 
@@ -28,6 +27,13 @@ namespace skill {
         AoE,     ///< targets a whole team
     };
 
+    /// Determines the way the skill deals effects
+    enum class Method {
+        Physical, ///< uses source's physical stats
+        Magical,  ///< uses source's magical stats
+        Neither,  ///< uses neither source's magical nor physical stats
+    };
+
     struct CostHook;
     struct CheckHook;
     struct ModifierHook;
@@ -38,28 +44,29 @@ namespace skill {
     template <typename Hook>
     class HookID {
     public:
+        static_assert(std::is_same_v<Hook, CostHook>
+                   || std::is_same_v<Hook, CheckHook>
+                   || std::is_same_v<Hook, ModifierHook>
+                   || std::is_same_v<Hook, EffectHook>
+                   || std::is_same_v<Hook, PostHook>,
+                      "Must provide a valid hook type");
+
         using HookType = Hook;
 
-        constexpr HookID(std::string_view name) noexcept
-            : hash{ std::hash<std::string_view>{}(name) }
-        {
-            static_assert(std::is_same_v<Hook, CostHook>
-                       || std::is_same_v<Hook, CheckHook>
-                       || std::is_same_v<Hook, ModifierHook>
-                       || std::is_same_v<Hook, EffectHook>
-                       || std::is_same_v<Hook, PostHook>,
-                          "Must provide a valid hook type");
-        }
+        constexpr HookID(uint64_t id) noexcept : id{ id } {}
+        constexpr HookID(std::string_view id) noexcept
+            : id{ std::hash<std::string_view>{}(id) }
+        {}
 
         friend constexpr bool operator==(HookID lhs, HookID rhs) noexcept {
-            return lhs.hash == rhs.hash;
+            return lhs.id == rhs.id;
         }
         friend constexpr bool operator!=(HookID lhs, HookID rhs) noexcept {
             return !(lhs == rhs);
         }
 
     private:
-        std::size_t hash;
+        uint64_t id;
     };
 
     /// Determine if a given type is a hook
@@ -76,49 +83,46 @@ namespace skill {
     >> : std::true_type {};
     template <typename T> inline constexpr auto is_hook_v = is_hook<T>::value;
 
-    template <typename T, typename = void> struct has_power : std::false_type {};
-    template <typename T> struct has_power<T, std::enable_if_t<
-        std::is_base_of_v<EffectHook, T>
-     && std::is_same_v<decltype(std::declval<T>().power), int>
-    >> : std::true_type {};
-    template <typename T> inline constexpr auto has_power_v = has_power<T>::value;
-
-    template <typename T, typename = void> struct has_accuracy : std::false_type {};
-    template <typename T> struct has_accuracy<T, std::enable_if_t<
-        std::is_base_of_v<CheckHook, T>
-     && std::is_same_v<decltype(std::declval<T>().accuracy), int>
-    >> : std::true_type {};
-    template <typename T> inline constexpr auto has_accuracy_v = has_accuracy<T>::value;
-
     /// Skill hook to apply pre-use costs to the skill.
     /// Allows a skill to disallow choice if the requirements are unavailable.
     struct CostHook {
-        CostHook(std::string_view name) : id{ name } {}
+        CostHook(HookID<CostHook> id) : id{ id } {}
         virtual ~CostHook() = default;
         const HookID<CostHook> id;
 
         /// Check if the entity can pay the given cost.
-        [[nodiscard]] virtual bool
-            canPay(const Entity& source) const noexcept = 0;
+        [[nodiscard]] virtual bool canPay(const Entity& source) const noexcept = 0;
 
         /// Make the entity pay the cost.
         virtual void pay(MessageLogger& logger, Entity& source) const noexcept = 0;
+
+        /// Descriptor of what the cost actually is; returns nothing if inapplicable
+        [[nodiscard]] virtual std::string getMessage() const noexcept {
+            return "";
+        }
     };
 
     /// Skill hook to determine if the skill hit a given target.
     struct CheckHook {
-        CheckHook(std::string_view name) : id{ name } {}
+        CheckHook(HookID<CheckHook> id) : id{ id } {}
         virtual ~CheckHook() = default;
         const HookID<CheckHook> id;
 
         /// Check if the skill hit the given target.
         [[nodiscard]] virtual bool didHit(MessageLogger& logger,
                const Entity& source, const Entity& target) const noexcept = 0;
+
+        /// Get the base accuracy of the check, if applicable.
+        /// An accuracy of 50 means a base of 50% chance of hitting.
+        /// Accuracies are multiplied together.
+        [[nodiscard]] virtual std::optional<int> getAccuracy() const noexcept {
+            return std::nullopt;
+        }
     };
 
     /// Skill hook to calculate damage modifiers for the skill.
     struct ModifierHook {
-        ModifierHook(std::string_view name) : id{ name } {}
+        ModifierHook(HookID<ModifierHook> id) : id{ id } {}
         virtual ~ModifierHook() = default;
         const HookID<ModifierHook> id;
 
@@ -127,6 +131,11 @@ namespace skill {
         /// for example, 50 means "50% more damage".
         [[nodiscard]] virtual int mod(MessageLogger& logger,
                 const Entity& source, const Entity& target) const noexcept = 0;
+
+        /// Returns a descriptor for the modifier of the skill. This is
+        /// either the element of the skill, or a string describing its effect.
+        [[nodiscard]] virtual
+            std::variant<Element, std::string> getDescription() const noexcept = 0;
     };
 
     /// Skill hook to actually do things.
@@ -134,7 +143,7 @@ namespace skill {
     /// This hook gets called for every target; if you want to apply something
     /// to the source only at the end of the skill's effects, use PostHook.
     struct EffectHook {
-        EffectHook(std::string_view name) : id{ name } {}
+        EffectHook(HookID<EffectHook> id) : id{ id } {}
         virtual ~EffectHook() = default;
         const HookID<EffectHook> id;
 
@@ -143,17 +152,30 @@ namespace skill {
         /// (e.g. 1.2 means "20% more damage")
         virtual void apply(MessageLogger& logger,
                 Entity& source, Entity& target, double mod) const noexcept = 0;
+
+        /// Return the power for the skill, if applicable.
+        [[nodiscard]] virtual std::optional<int> getPower() const noexcept {
+            return std::nullopt;
+        }
+
+        /// Returns the method of how the skill does effects, if applicable.
+        [[nodiscard]] virtual std::optional<Method> getMethod() const noexcept {
+            return std::nullopt;
+        }
     };
 
     /// Skill hook to run after everything else is done.
     /// Can be used to do final effects on the source.
     struct PostHook {
-        PostHook(std::string_view name) : id{ name } {}
+        PostHook(HookID<PostHook> id) : id{ id } {}
         virtual ~PostHook() = default;
         const HookID<PostHook> id;
 
         /// Apply effects to the source after everything else is done.
         virtual void apply(MessageLogger& logger, Entity& source) const noexcept = 0;
+
+        /// Description of what the hook does
+        [[nodiscard]] virtual std::string getMessage() const noexcept = 0;
     };
 
 }
@@ -186,11 +208,27 @@ public:
     /// Get the attack spread (AOE-ness) of the skill
     [[nodiscard]] skill::Spread getSpread() const noexcept;
 
+    /// Get the attack method (source stats used) of the skill
+    [[nodiscard]] skill::Method getMethod() const noexcept;
+
     /// If applicable, get the power of the skill
     [[nodiscard]] std::optional<int> getPower() const noexcept;
 
     /// If applicable, get the percentage chance of scoring a hit with the skill
     [[nodiscard]] std::optional<int> getAccuracy() const noexcept;
+
+    /// Get the primary element associated with the skill.
+    [[nodiscard]] Element getElement() const noexcept;
+
+    /// Get a human-readable description of the skill's costs.
+    /// An empty string means there are no costs.
+    [[nodiscard]] std::string getCostDescription() const noexcept;
+
+    /// Get a list of human-readable descriptions of the modifiers for this skill
+    [[nodiscard]] std::vector<std::string> getModifierDescriptions() const noexcept;
+
+    /// Get a list of human-readable descriptions of the post-use effects for this skill
+    [[nodiscard]] std::vector<std::string> getUseEffectDescriptions() const noexcept;
 
     /// Add a hook to the given hook list
     /// Requires "Hook" to be a valid hook type
@@ -200,11 +238,6 @@ public:
         auto& hook_list = getHookList<Hook>();
         auto ptr = std::make_unique<std::remove_reference_t<Hook>>(
                 std::forward<Hook>(hook));
-        // TODO: handle this more nicely than sticking it awkwardly in here
-        if constexpr (skill::has_power_v<Hook>)
-            power_sources[ptr.get()] = hook.power;
-        if constexpr (skill::has_accuracy_v<Hook>)
-            accuracy_sources[ptr.get()] = hook.accuracy;
         hook_list.push_back(std::move(ptr));
     }
 
@@ -217,29 +250,12 @@ public:
             std::begin(hook_list), std::end(hook_list),
             [id](auto&& hook) { return hook->id != id; }
         );
-        // TODO: handle this more nicely than sticking it awkwardly in here
-        if constexpr (std::is_same_v<skill::EffectHook, Hook>) {
-            std::for_each(to_erase, std::end(hook_list), [&](auto&& x){
-                power_sources.erase(x.get());
-            });
-        }
-        if constexpr (std::is_same_v<skill::CheckHook, Hook>) {
-            std::for_each(to_erase, std::end(hook_list), [&](auto&& x){
-                accuracy_sources.erase(x.get());
-            });
-        }
         hook_list.erase(to_erase, std::end(hook_list));
     }
 
 private:
     std::string name;    ///< the name of the skill
     skill::Spread spread; ///< the spread of the skill
-
-    ///< the hooks that contribute to the skill's power
-    std::unordered_map<skill::EffectHook*, int> power_sources;
-
-    ///< the hooks that contribute to the skill's accuracy
-    std::unordered_map<skill::CheckHook*, int> accuracy_sources;
 
     std::vector<std::unique_ptr<skill::CostHook>> cost_hooks;
     std::vector<std::unique_ptr<skill::CheckHook>> check_hooks;
