@@ -12,7 +12,7 @@ namespace battle::skill {
 template <battle::Pool pool>
 struct PoolCost : CostHook {
     PoolCost(int amt)
-        : CostHook{{ "pool" + to_string(pool) }}
+        : CostHook{ {{ "pool" + to_string(pool) }} }
         , amt{ amt }
     {}
 
@@ -69,7 +69,7 @@ struct DamageEffect : EffectHook {
     static_assert(method == Method::Physical || method == Method::Magical);
 
     DamageEffect(int power)
-        : EffectHook{{ std::string("dmg") + (method == Method::Physical ? "P" : "M") }}
+        : EffectHook{ {{ std::string("dmg") + (method == Method::Physical ? "P" : "M") }} }
         , power{ power }
     {}
 

@@ -45,7 +45,8 @@ Stats calculateModifiedStats(Stats s, const std::vector<StatModifier>& mods) noe
 
     for (unsigned i = 0; i < num_stat_types; i++) {
         performMod(static_cast<StatType>(i), [&](auto& stat) {
-            stat *= stat_mult_sum[i] / 100.0 + 1.0;
+            auto mod = stat_mult_sum[i] / 100.0 + 1.0;
+            stat = static_cast<int>(std::round(stat * mod));
             stat = std::max(stat, 1);  // cannot have less than 1 in a stat
         });
     }
@@ -53,7 +54,8 @@ Stats calculateModifiedStats(Stats s, const std::vector<StatModifier>& mods) noe
     for (unsigned i = 0; i < num_elements; i++) {
         auto e = static_cast<Element>(i);
         auto r = s.getResistance(e);
-        s.setResistance(e, r * (resist_mult_sum[i] / 100.0 + 1.0));
+        auto mod = resist_mult_sum[i] / 100.0 + 1.0;
+        s.setResistance(e, static_cast<int>(std::round(r * mod)));
     }
 
     return s;
