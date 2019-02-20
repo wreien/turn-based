@@ -34,6 +34,7 @@ set(SOURCE_FILES
     src/battle/statuseffect.h
     src/battle/statuseffect.cpp
     src/util.h
+    src/random.h
 )
 
 if(RENDERER STREQUAL "console")
