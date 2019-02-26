@@ -10,8 +10,20 @@ set_property(CACHE RENDERER PROPERTY STRINGS console sfml)
 if(RENDERER STREQUAL "sfml")
     find_package(SFML 2.5 COMPONENTS graphics REQUIRED)
 endif()
+find_package(Lua 5.3 REQUIRED)
 
-set(SOURCE_FILES
+
+add_executable(${PROJECT_NAME})
+
+set_target_properties(${PROJECT_NAME} PROPERTIES
+    CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED YES
+    CXX_EXTENSIONS NO
+)
+
+target_include_directories(${PROJECT_NAME} SYSTEM PRIVATE third_party/include)
+
+target_sources(${PROJECT_NAME} PRIVATE
     src/battle/action.h
     src/battle/battlesystem.cpp
     src/battle/battlesystem.h
@@ -27,7 +39,6 @@ set(SOURCE_FILES
     src/battle/playercontroller.h
     src/battle/skill.cpp
     src/battle/skill.h
-    src/battle/skillhooks.h
     src/battle/skillref.h
     src/battle/stats.h
     src/battle/stats.cpp
@@ -38,25 +49,16 @@ set(SOURCE_FILES
 )
 
 if(RENDERER STREQUAL "console")
-    list(APPEND SOURCE_FILES
+    target_sources(${PROJECT_NAME} PRIVATE
         src/conmain.cpp
     )
 else()
-    list(APPEND SOURCE_FILES
+    target_sources(${PROJECT_NAME} PRIVATE
         src/main.cpp
         src/game.cpp
         src/game.h
     )
 endif()
-
-add_executable(${PROJECT_NAME} ${SOURCE_FILES})
-
-
-set_target_properties(${PROJECT_NAME} PROPERTIES
-    CXX_STANDARD 17
-    CXX_STANDARD_REQUIRED YES
-    CXX_EXTENSIONS NO
-)
 
 if(MSVC)
     string(REGEX REPLACE "/W[0-9]" "/W4" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
@@ -75,7 +77,7 @@ else()  # most likely Clang or GCC
     endif()
 endif()
 
-
 if(RENDERER STREQUAL "sfml")
     target_link_libraries(${PROJECT_NAME} sfml-graphics)
 endif()
+target_link_libraries(${PROJECT_NAME} lua)
