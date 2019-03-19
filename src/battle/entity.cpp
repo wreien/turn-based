@@ -2,6 +2,7 @@
 #include "controller.h"
 #include "messages.h"
 #include <iterator>
+#include <algorithm>
 
 namespace battle {
 
@@ -30,7 +31,7 @@ namespace {
                 3 * level,  // mp
                 10,         // tech
                 2 * level,  // p_atk
-                2 * level,  // p_def
+                1 * level,  // p_def
                 3 * level,  // m_atk
                 2 * level,  // m_def
                 5,          // skill
@@ -55,9 +56,9 @@ namespace {
         (void)level;
         std::vector<Skill> skills;
         skills.emplace_back("attack");
-        skills.emplace_back("heal");
-        skills.emplace_back("attack boost");
-        skills.emplace_back("defense break");
+        // skills.emplace_back("heal");
+        // skills.emplace_back("attack boost");
+        // skills.emplace_back("defense break");
         return skills;
     }
 

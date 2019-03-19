@@ -81,3 +81,10 @@ if(RENDERER STREQUAL "sfml")
     target_link_libraries(${PROJECT_NAME} sfml-graphics)
 endif()
 target_link_libraries(${PROJECT_NAME} lua)
+
+# copy lua script files to the right place
+add_custom_target(copy_lua ALL
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/lua
+        $<TARGET_FILE_DIR:${PROJECT_NAME}>/lua
+)

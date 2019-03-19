@@ -1,194 +1,219 @@
 #include "skill.h"
-#include "skillhooks.h"
 #include "entity.h"
 #include "messages.h"
-#include "statuseffect.h"
-#include "../util.h"
-#include <cmath>
-#include <numeric>
+
+#include <type_traits>
+#include <string_view>
+
+#define SOL_CHECK_ARGUMENTS 1
+#include <sol/sol.hpp>
+
+using battle::Entity;
+using battle::MessageLogger;
+
+// helpers to interface to the skill stuff
+namespace {
+
+    struct EntityLogger {
+        EntityLogger(Entity& e, MessageLogger& l)
+            : entity{ e }, logger{ l }
+        {}
+
+        operator Entity&() { return entity; }
+
+        Entity& entity;
+        MessageLogger& logger;
+    };
+
+    // TODO: noexcept part of type?
+
+    template <typename Ret, typename... Args>
+    auto wrap_fn(Ret (Entity::* ptr)(MessageLogger&, Args...)) {
+        return [ptr](EntityLogger& self, Args&&... args) {
+            return (self.entity.*ptr)(self.logger, std::forward<Args>(args)...);
+        };
+    }
+
+    template <typename Ret, typename... Args>
+    auto wrap_fn(Ret (Entity::* ptr)(MessageLogger&, Args...) const) {
+        return [ptr](EntityLogger& self, Args&&... args) {
+            return (self.entity.*ptr)(self.logger, std::forward<Args>(args)...);
+        };
+    }
+
+    template <typename Ret, typename... Args>
+    auto wrap_fn(Ret (Entity::* ptr)(Args...)) {
+        return [ptr](EntityLogger& self, Args&&... args) {
+            return (self.entity.*ptr)(std::forward<Args>(args)...);
+        };
+    }
+
+    template <typename Ret, typename... Args>
+    auto wrap_fn(Ret (Entity::* ptr)(Args...) const) {
+        return [ptr](EntityLogger& self, Args&&... args) {
+            return (self.entity.*ptr)(std::forward<Args>(args)...);
+        };
+    }
+
+    sol::state_view luaState() {
+        static sol::state lua = [](){
+            using namespace battle;
+            using namespace std::literals;
+
+            sol::state lua;
+            lua.open_libraries(
+                    sol::lib::base,    // required
+                    sol::lib::table,   // inserting into numbered lists
+                    sol::lib::math,    // random no's and other math fns
+                    sol::lib::package  // require (TODO: do we want this?)
+            );
+            lua.script("package.path = './lua/?.lua'");
+
+            lua.new_enum("method", {
+                std::make_pair( "physical"sv, Skill::Method::Physical ),
+                std::make_pair( "magical"sv, Skill::Method::Magical ),
+                std::make_pair( "mixed"sv, Skill::Method::Neither ),
+                std::make_pair( "none"sv, Skill::Method::Neither )
+            });
+
+            lua.new_usertype<EntityLogger>("Entity",
+                "new", sol::no_constructor,
+
+                "stats", sol::readonly_property( wrap_fn(&Entity::getStats) ),
+
+                "drainHP",   wrap_fn(&Entity::drain<Pool::HP>),
+                "drainMP",   wrap_fn(&Entity::drain<Pool::MP>),
+                "drainTech", wrap_fn(&Entity::drain<Pool::Tech>),
+
+                "restoreHP",   wrap_fn(&Entity::restore<Pool::HP>),
+                "restoreMP",   wrap_fn(&Entity::restore<Pool::MP>),
+                "restoreTech", wrap_fn(&Entity::restore<Pool::Tech>)
+            );
+            lua.new_usertype<Stats>("Stats",
+                "max_hp",   &Stats::max_hp,
+                "max_mp",   &Stats::max_mp,
+                "max_tech", &Stats::max_tech,
+
+                "p_atk", &Stats::p_atk,
+                "p_def", &Stats::p_def,
+                "m_atk", &Stats::m_atk,
+                "m_def", &Stats::m_def,
+                "skill", &Stats::skill,
+                "evade", &Stats::evade,
+                "speed", &Stats::speed,
+
+                "resist", sol::overload(
+                    &Stats::getResistance,
+                    &Stats::setResistance
+                )
+            );
+
+            lua.script_file("lua/skills/main.lua");
+
+            return lua;
+        }();
+
+        return lua;
+    }
+
+}
 
 namespace battle {
 
-using namespace skill;
+struct Skill::Data {
+    Data(const std::string& name) {
+        auto lua = luaState();
+        sol::protected_function fn = lua["Skills"]["get"];
+        auto ret = fn(lua["Skills"], name);
+        if (ret.valid())
+            skill_data = ret;
+        else {
+            sol::error err = ret;
+            throw std::invalid_argument(err.what());
+        }
+    }
+
+    sol::table skill_data;
+};
+
+void Skill::DataDeleter::operator()(Data* d) const {
+    delete d;
+}
 
 Skill::Skill(const std::string& name)
-    : name{ name }
-    , spread{ Spread::Single }
-    , cost_hooks{ }
-    , check_hooks{ }
-    , mod_hooks{ }
-    , effect_hooks{ }
-    , post_hooks{ }
+    : data{ new Data{ name } }
 {
-    // TODO: don't hardcode :)
-    if (name == "heal") {
-        addHook(PoolCost<Pool::MP>{ 1 });
-        addHook(HealEffect{ 2 });
-    } else if (name == "attack") {
-        addHook(DamageEffect<Method::Physical>{ 2 });
-    } else if (name == "attack boost") {
-        addHook(PoolCost<Pool::Tech>{ 1 });
-        addHook(ApplyStatusEffect{ StatusEffectId::AttackBoost });
-    } else if (name == "defense break") {
-        addHook(PoolCost<Pool::Tech>{ 1 });
-        addHook(ApplyStatusEffect{ StatusEffectId::DefenseBreak });
-    }
+    refresh();
 }
 
 bool Skill::isUsableBy(const Entity& source) const noexcept {
-    for (const auto& hook : cost_hooks)
-        if (!hook->canPay(source))
-            return false;
+    // note: std::nullopt < x for all x
+    if (hp_cost > source.get<Pool::HP>())
+        return false;
+    if (mp_cost > source.get<Pool::MP>())
+        return false;
+    if (tech_cost > source.get<Pool::Tech>())
+        return false;
+    // TODO items
     return true;
 }
 
 void Skill::use(MessageLogger& logger,
                 Entity& source,
                 Entity& target,
-                const std::vector<Entity*>& team
-                ) const noexcept
+                const std::vector<Entity*>& team)
+    const noexcept
 {
     logger.appendMessage(message::SkillUsed{ *this, source, target });
+    processCost(logger, source);
 
-    for (const auto& hook : cost_hooks)
-        hook->pay(logger, source);
+    EntityLogger s{ source, logger };
+    EntityLogger t{ target, logger };
+    (void) team; // TODO
 
-    using S = skill::Spread;
-    if (spread == S::Self || spread == S::Single) {
-        if (source.isDead())
-            return;
-        executeSkill(logger, source, target, target);
-    } else {
-        for (auto&& entity : team) {
-            if (source.isDead())
-                return;
-            executeSkill(logger, source, *entity, target);
-        }
-    }
-
-    if (source.isDead())
-        return;
-
-    for (const auto& hook : post_hooks)
-        hook->apply(logger, source);
-}
-
-void Skill::executeSkill(MessageLogger& logger,
-                         Entity& source,
-                         Entity& target,
-                         const Entity& orig
-                         ) const noexcept
-{
-    bool hit = true;
-    for (const auto& hook : check_hooks)
-        if (!hook->didHit(logger, source, target)) hit = false;
-    if (hit) {
-        double mod = 1;
-        for (const auto& hook : mod_hooks) {
-            int m = hook->mod(logger, source, target);
-            mod *= static_cast<double>(m + 100) / 100.0;
-            mod = std::max(mod, 0.0);
-        }
-
-        if (spread == skill::Spread::SemiAoE
-            && std::addressof(target) != std::addressof(orig))
-        {
-            mod *= 0.5;
-        }
-
-        for (const auto& hook : effect_hooks)
-            hook->apply(logger, source, target, mod);
+    sol::protected_function perform = data->skill_data["perform"];
+    auto ret = perform(data->skill_data, s, t);
+    if (!ret.valid()) {
+        sol::error err = ret;
+        throw std::runtime_error(err.what());
     }
 }
 
-Spread Skill::getSpread() const noexcept {
-    return spread;
+void Skill::processCost(MessageLogger& logger, Entity& source) const noexcept {
+    if (hp_cost) source.drain<Pool::HP>(logger, *hp_cost);
+    if (mp_cost) source.drain<Pool::MP>(logger, *mp_cost);
+    if (tech_cost) source.drain<Pool::Tech>(logger, *tech_cost);
+    // TODO items
 }
 
-Method Skill::getMethod() const noexcept {
-    auto method = Method::Neither;
-    for (auto&& hook : effect_hooks) {
-        auto opt = hook->getMethod();
-        method = opt.value_or(method);
-    }
-    return method;
-}
-
-// TODO: if needed, cache results? (this is also goes for getAccuracy)
-// I don't expect it to be an issue, though, since it's unlikely for any skill
-// to have more than one or two power/accuracy checks
-std::optional<int> Skill::getPower() const noexcept {
-    bool has_power = false;
-    int power = 0;
-
-    for (auto&& hook : effect_hooks) {
-        if (auto opt = hook->getPower()) {
-            power += *opt;
-            has_power = true;
-        }
-    }
-
-    if (has_power)
-        return power;
-    return std::nullopt;
-}
-
-std::optional<int> Skill::getAccuracy() const noexcept {
-    bool has_accuracy = false;
-    double accuracy = 1;
-
-    // TODO: fixed point calculations, maybe?
-    // (will that even matter)
-    for (auto&& hook : check_hooks) {
-        if (auto opt = hook->getAccuracy()) {
-            accuracy *= static_cast<double>(*opt) / 100.0;
-            has_accuracy = true;
-        }
-    }
-
-    if (has_accuracy)
-        return static_cast<int>(std::round(accuracy * 100.0));
-    return std::nullopt;
-}
-
-Element Skill::getElement() const noexcept {
-    auto element = Element::Neutral;
-    // OK, this is *slightly* ridiculous ;)
-    for (auto&& hook : mod_hooks)
-        if (auto var = hook->getDescription(); auto pe = std::get_if<Element>(&var))
-            element = *pe;
-    return element;
-}
-
-std::string Skill::getCostDescription() const noexcept {
-    using namespace std::string_literals;
-
-    auto fn = [](std::string acc, const std::unique_ptr<CostHook>& hook) {
-        auto m = hook->getMessage();
-        auto e = std::empty(acc);
-        if (std::empty(m))
-            return acc;
-        return std::move(acc) + (e ? ""s : " + "s) + std::move(m);
+void Skill::refresh() {
+    const auto opt = [](sol::table t, const char* c) {
+        sol::optional<int> val = t[c];
+        if (val)
+            return std::optional<int>{ *val };
+        else
+            return std::optional<int>{ std::nullopt };
     };
 
-    auto cost = std::accumulate(std::begin(cost_hooks), std::end(cost_hooks), ""s, fn);
-    return std::empty(cost) ? "None"s : cost;
-}
+    const auto t = data->skill_data;
 
-std::vector<std::string> Skill::getModifierDescriptions() const noexcept {
-    std::vector<std::string> descriptions;
-    for (auto&& hook : mod_hooks)
-        if (auto x = hook->getDescription(); auto ps = std::get_if<std::string>(&x))
-            descriptions.push_back(*ps);
-    return descriptions;
-}
+    name = t["name"];
+    description = t["desc"];
+    level = t["level"];
+    max_level = t["max_level"];
 
-std::vector<std::string> Skill::getUseEffectDescriptions() const noexcept {
-    std::vector<std::string> descriptions;
-    for (auto&& hook : post_hooks)
-        descriptions.push_back(hook->getMessage());
-    return descriptions;
-}
+    power = opt(t, "power");
+    accuracy = opt(t, "accuracy");
+    method = t["method"].get_or(Method::Neither);
+    spread = t["spread"].get_or(Spread::Single);
+    element = t["element"].get_or(Element::Neutral);
 
+    hp_cost = opt(t, "hp_cost");
+    mp_cost = opt(t, "mp_cost");
+    tech_cost = opt(t, "tech_cost");
+    // items
+
+    // applied perks
+}
 
 }

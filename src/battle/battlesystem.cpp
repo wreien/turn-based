@@ -8,13 +8,6 @@
 
 namespace battle {
 
-BattleSystem::BattleSystem()
-    : combatants{}
-    , turn_order{}
-    , current_turn{ std::end(turn_order) }
-{
-}
-
 BattleSystem::BattleSystem(const std::vector<EntityRef>& blues,
                            const std::vector<EntityRef>& reds)
     : combatants{}

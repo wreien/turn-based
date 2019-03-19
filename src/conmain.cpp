@@ -133,7 +133,7 @@ void handleUserChoice(battle::PlayerController& controller,
 
                 {
                     std::cout << " | method = ";
-                    using battle::skill::Method;
+                    using Method = battle::Skill::Method;
                     switch (skill->getMethod()) {
                     case Method::Physical: std::cout << "physical"; break;
                     case Method::Magical:  std::cout << "magical";  break;
@@ -141,14 +141,28 @@ void handleUserChoice(battle::PlayerController& controller,
                     }
                 }
 
-                std::cout << " | cost = " << skill->getCostDescription();
+                std::cout << " | cost = ";
+                bool has_cost = false;
+                if (auto hpc = skill->getHPCost(); hpc) {
+                    has_cost = true;
+                    std::cout << *hpc << " HP";
+                }
+                if (auto mpc = skill->getMPCost(); mpc) {
+                    if (has_cost)
+                        std::cout << " + ";
+                    has_cost = true;
+                    std::cout << *mpc << " MP";
+                }
+                if (auto tpc = skill->getTechCost(); tpc) {
+                    if (has_cost)
+                        std::cout << " + ";
+                    has_cost = true;
+                    std::cout << *tpc << " Tech";
+                }
+                if (!has_cost)
+                    std::cout << "None";
 
                 std::cout << "\n";
-
-                for (auto&& desc : skill->getModifierDescriptions())
-                    std::cout << "      - " << desc << "\n";
-                for (auto&& desc : skill->getUseEffectDescriptions())
-                    std::cout << "      - " << desc << "\n";
             }
             std::cout << "> ";
 
