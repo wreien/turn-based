@@ -19,7 +19,7 @@ namespace {
             : entity{ e }, logger{ l }
         {}
 
-        operator Entity&() { return entity; }
+        operator Entity&() noexcept { return entity; }
 
         Entity& entity;
         MessageLogger& logger;
@@ -28,28 +28,28 @@ namespace {
     // TODO: noexcept part of type?
 
     template <typename Ret, typename... Args>
-    auto wrap_fn(Ret (Entity::* ptr)(MessageLogger&, Args...)) {
+    auto wrap_entity_fn(Ret (Entity::* ptr)(MessageLogger&, Args...)) noexcept {
         return [ptr](EntityLogger& self, Args&&... args) {
             return (self.entity.*ptr)(self.logger, std::forward<Args>(args)...);
         };
     }
 
     template <typename Ret, typename... Args>
-    auto wrap_fn(Ret (Entity::* ptr)(MessageLogger&, Args...) const) {
+    auto wrap_entity_fn(Ret (Entity::* ptr)(MessageLogger&, Args...) const) noexcept {
         return [ptr](EntityLogger& self, Args&&... args) {
             return (self.entity.*ptr)(self.logger, std::forward<Args>(args)...);
         };
     }
 
     template <typename Ret, typename... Args>
-    auto wrap_fn(Ret (Entity::* ptr)(Args...)) {
+    auto wrap_entity_fn(Ret (Entity::* ptr)(Args...)) noexcept {
         return [ptr](EntityLogger& self, Args&&... args) {
             return (self.entity.*ptr)(std::forward<Args>(args)...);
         };
     }
 
     template <typename Ret, typename... Args>
-    auto wrap_fn(Ret (Entity::* ptr)(Args...) const) {
+    auto wrap_entity_fn(Ret (Entity::* ptr)(Args...) const) noexcept {
         return [ptr](EntityLogger& self, Args&&... args) {
             return (self.entity.*ptr)(std::forward<Args>(args)...);
         };
@@ -58,7 +58,6 @@ namespace {
     sol::state_view luaState() {
         static sol::state lua = [](){
             using namespace battle;
-            using namespace std::literals;
 
             sol::state lua;
             lua.open_libraries(
@@ -67,48 +66,91 @@ namespace {
                     sol::lib::math,    // random no's and other math fns
                     sol::lib::package  // require (TODO: do we want this?)
             );
+
+            // prevent accidentally loading weird libraries and make sure we
+            // actually get the libraries we *do* want
             lua.script("package.path = './lua/?.lua'");
 
-            lua.new_enum("method", {
-                std::make_pair( "physical"sv, Skill::Method::Physical ),
-                std::make_pair( "magical"sv, Skill::Method::Magical ),
-                std::make_pair( "mixed"sv, Skill::Method::Neither ),
-                std::make_pair( "none"sv, Skill::Method::Neither )
+            lua.new_enum<Skill::Method>("method", {
+                { "physical", Skill::Method::Physical },
+                { "magical",  Skill::Method::Magical },
+                { "mixed",    Skill::Method::Mixed },
+                { "none",     Skill::Method::None },
             });
 
-            lua.new_usertype<EntityLogger>("Entity",
-                "new", sol::no_constructor,
+            lua.new_enum<Skill::Spread>("spread", {
+                { "self",    Skill::Spread::Self },
+                { "single",  Skill::Spread::Single },
+                { "semiaoe", Skill::Spread::SemiAoE },
+                { "aoe",     Skill::Spread::AoE },
+                { "field",   Skill::Spread::Field },
+            });
 
-                "stats", sol::readonly_property( wrap_fn(&Entity::getStats) ),
+            lua.new_enum<Element>("element", {
+                { "neutral",   Element::Neutral },
+                { "fire",      Element::Fire },
+                { "water",     Element::Water },
+                { "earth",     Element::Earth },
+                { "air",       Element::Air },
+                { "light",     Element::Light },
+                { "dark",      Element::Dark },
+                { "ice",       Element::Ice },
+                { "lightning", Element::Lightning },
+                { "sand",      Element::Sand },
+                { "steam",     Element::Steam },
+                { "life",      Element::Life },
+                { "metal",     Element::Metal },
+            });
 
-                "drainHP",   wrap_fn(&Entity::drain<Pool::HP>),
-                "drainMP",   wrap_fn(&Entity::drain<Pool::MP>),
-                "drainTech", wrap_fn(&Entity::drain<Pool::Tech>),
+            {
+                auto metatable = lua.new_usertype<EntityLogger>("Entity",
+                    "new", sol::no_constructor);
 
-                "restoreHP",   wrap_fn(&Entity::restore<Pool::HP>),
-                "restoreMP",   wrap_fn(&Entity::restore<Pool::MP>),
-                "restoreTech", wrap_fn(&Entity::restore<Pool::Tech>)
+                metatable["stats"] = sol::readonly_property(
+                        wrap_entity_fn(&Entity::getStats));
+
+                metatable["drainHP"]   = wrap_entity_fn(&Entity::drain<Pool::HP>);
+                metatable["drainMP"]   = wrap_entity_fn(&Entity::drain<Pool::MP>);
+                metatable["drainTech"] = wrap_entity_fn(&Entity::drain<Pool::Tech>);
+
+                metatable["restoreHP"]   = wrap_entity_fn(&Entity::restore<Pool::HP>);
+                metatable["restoreMP"]   = wrap_entity_fn(&Entity::restore<Pool::MP>);
+                metatable["restoreTech"] = wrap_entity_fn(&Entity::restore<Pool::Tech>);
+
+                metatable["getHP"]   = wrap_entity_fn(&Entity::get<Pool::HP>);
+                metatable["getMP"]   = wrap_entity_fn(&Entity::get<Pool::MP>);
+                metatable["getTech"] = wrap_entity_fn(&Entity::get<Pool::Tech>);
+            }
+
+            {
+                auto metatable = lua.new_usertype<Stats>("Stats");
+
+                metatable["max_hp"]   = &Stats::max_hp,
+                metatable["max_mp"]   = &Stats::max_mp,
+                metatable["max_tech"] = &Stats::max_tech,
+
+                metatable["p_atk"] = &Stats::p_atk,
+                metatable["p_def"] = &Stats::p_def,
+                metatable["m_atk"] = &Stats::m_atk,
+                metatable["m_def"] = &Stats::m_def,
+                metatable["skill"] = &Stats::skill,
+                metatable["evade"] = &Stats::evade,
+                metatable["speed"] = &Stats::speed,
+
+                // not *quite* a real property
+                metatable["resist"] = sol::overload(
+                    &Stats::getResistance, &Stats::setResistance);
+            }
+
+            // now that we've set up all the usertypes, we're safe to load the
+            // current list of possible skills
+            lua.script_file("lua/skills/main.lua",
+                [](lua_State*, sol::protected_function_result pfr) -> decltype(pfr) {
+                    sol::error err = pfr;
+                    throw std::runtime_error(
+                        std::string{"error loading skills: "} + err.what());
+                }
             );
-            lua.new_usertype<Stats>("Stats",
-                "max_hp",   &Stats::max_hp,
-                "max_mp",   &Stats::max_mp,
-                "max_tech", &Stats::max_tech,
-
-                "p_atk", &Stats::p_atk,
-                "p_def", &Stats::p_def,
-                "m_atk", &Stats::m_atk,
-                "m_def", &Stats::m_def,
-                "skill", &Stats::skill,
-                "evade", &Stats::evade,
-                "speed", &Stats::speed,
-
-                "resist", sol::overload(
-                    &Stats::getResistance,
-                    &Stats::setResistance
-                )
-            );
-
-            lua.script_file("lua/skills/main.lua");
 
             return lua;
         }();
@@ -136,7 +178,7 @@ struct Skill::Data {
     sol::table skill_data;
 };
 
-void Skill::DataDeleter::operator()(Data* d) const {
+void Skill::DataDeleter::operator()(Data* d) const noexcept {
     delete d;
 }
 
@@ -161,8 +203,7 @@ bool Skill::isUsableBy(const Entity& source) const noexcept {
 void Skill::use(MessageLogger& logger,
                 Entity& source,
                 Entity& target,
-                const std::vector<Entity*>& team)
-    const noexcept
+                const std::vector<Entity*>& team) const
 {
     logger.appendMessage(message::SkillUsed{ *this, source, target });
     processCost(logger, source);
@@ -175,6 +216,7 @@ void Skill::use(MessageLogger& logger,
     auto ret = perform(data->skill_data, s, t);
     if (!ret.valid()) {
         sol::error err = ret;
+        // TODO: dedicated error type for skill failures/lua failures
         throw std::runtime_error(err.what());
     }
 }
@@ -187,12 +229,17 @@ void Skill::processCost(MessageLogger& logger, Entity& source) const noexcept {
 }
 
 void Skill::refresh() {
-    const auto opt = [](sol::table t, const char* c) {
-        sol::optional<int> val = t[c];
-        if (val)
-            return std::optional<int>{ *val };
-        else
-            return std::optional<int>{ std::nullopt };
+    const auto opt = [](sol::table t, const char* c) -> std::optional<int> {
+        using namespace std::literals;
+        auto val = t[c];
+        switch (val.get_type()) {
+        case sol::type::number:
+            return val;
+        case sol::type::none:
+            return std::nullopt;
+        default:
+            throw std::invalid_argument("'"s + c + "' was not a number"s);
+        }
     };
 
     const auto t = data->skill_data;
@@ -204,7 +251,7 @@ void Skill::refresh() {
 
     power = opt(t, "power");
     accuracy = opt(t, "accuracy");
-    method = t["method"].get_or(Method::Neither);
+    method = t["method"].get_or(Method::None);
     spread = t["spread"].get_or(Spread::Single);
     element = t["element"].get_or(Element::Neutral);
 

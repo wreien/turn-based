@@ -19,19 +19,20 @@ class MessageLogger;
 class Skill {
 public:
     /// Determines the spread of an attack
-    /// TODO: field attacks (probably not actually a `skill' in the same way)
     enum class Spread {
         Self,    ///< targets source
         Single,  ///< targets one entity
         SemiAoE, ///< targets one entity, with spread to rest of their team
         AoE,     ///< targets a whole team
+        Field,   ///< targets the entire battleground
     };
 
-    /// Determines the way the skill deals effects
+    /// Determines the way the skill calculates the effect of power
     enum class Method {
-        Physical, ///< uses source's physical stats
-        Magical,  ///< uses source's magical stats
-        Neither,  ///< uses neither source's magical nor physical stats
+        Physical, ///< uses physical stats
+        Magical,  ///< uses magical stats
+        Mixed,    ///< uses weird stats/some combination of the above
+        None,     ///< doesn't use power
     };
 
     // TODO: UI category?
@@ -61,7 +62,7 @@ public:
     /// Process the effects of `source' using this skill on `target' with team `team'
     /// Logs to `logger'
     void use(MessageLogger& logger, Entity& source, Entity& target,
-             const std::vector<Entity*>& team) const noexcept;
+             const std::vector<Entity*>& team) const;
 
 public:
     // costs
@@ -113,7 +114,7 @@ public:
 private:
     // pimpl idiom (with custom deleter)
     struct Data;
-    struct DataDeleter { void operator()(Data*) const; };
+    struct DataDeleter { void operator()(Data*) const noexcept; };
     std::unique_ptr<Data, DataDeleter> data;
 
     void processCost(MessageLogger& logger, Entity& source) const noexcept;
@@ -136,9 +137,9 @@ private:
 
     std::optional<int> power;
     std::optional<int> accuracy;
-    Spread spread = Spread::Single;
-    Method method = Method::Neither;
-    Element element = Element::Neutral;
+    Spread spread;
+    Method method;
+    Element element;
 
     std::optional<int> hp_cost;
     std::optional<int> mp_cost;

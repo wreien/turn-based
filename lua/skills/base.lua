@@ -71,18 +71,15 @@ end
 -- Standard damage calculator
 -- Should override/ignore if using an unusual method
 function SkillBase:baseDamage(source, target)
-    local stats = source.stats
     local attack = 0
     local defense = 0
 
     if self.method == method.physical then
-        attack = stats.p_atk
-        defense = stats.p_def
+        attack = source.stats.p_atk
+        defense = target.stats.p_def
     elseif self.method == method.magical then
-        attack = stats.m_atk
-        defense = stats.m_def
-    else
-        return 0
+        attack = source.stats.m_atk
+        defense = target.stats.m_def
     end
 
     return self.power * attack * 2 / (1 + defense)

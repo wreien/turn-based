@@ -137,7 +137,8 @@ void handleUserChoice(battle::PlayerController& controller,
                     switch (skill->getMethod()) {
                     case Method::Physical: std::cout << "physical"; break;
                     case Method::Magical:  std::cout << "magical";  break;
-                    case Method::Neither:  std::cout << "status";   break;
+                    case Method::Mixed:    std::cout << "mixed";    break;
+                    case Method::None:     std::cout << "status";   break;
                     }
                 }
 
@@ -157,10 +158,10 @@ void handleUserChoice(battle::PlayerController& controller,
                     if (has_cost)
                         std::cout << " + ";
                     has_cost = true;
-                    std::cout << *tpc << " Tech";
+                    std::cout << *tpc << " TP";
                 }
                 if (!has_cost)
-                    std::cout << "None";
+                    std::cout << "none";
 
                 std::cout << "\n";
             }
