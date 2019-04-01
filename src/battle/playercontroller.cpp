@@ -1,6 +1,5 @@
 #include "playercontroller.h"
 #include "entity.h"
-#include "../util.h"
 #include <algorithm>
 
 namespace battle {

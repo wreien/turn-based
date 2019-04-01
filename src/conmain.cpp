@@ -11,7 +11,7 @@
 #include "battle/entity.h"
 #include "battle/npccontroller.h"
 #include "battle/playercontroller.h"
-#include "util.h"
+#include "overload.h"
 
 template <typename T, typename F>
 T getInput(F is_valid, std::string_view errormsg = "Invalid input!\n> ") {

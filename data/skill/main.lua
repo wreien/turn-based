@@ -1,5 +1,5 @@
-require "skills.base"
-require "skills.perk"
+require "skill.base"
+require "skill.perk"
 
 Skills:add{
     name = "attack",

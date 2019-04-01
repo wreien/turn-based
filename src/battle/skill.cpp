@@ -148,7 +148,7 @@ namespace {
 
             // now that we've set up all the usertypes, we're safe to load the
             // current list of possible skills
-            lua.script_file("./data/skills/main.lua",
+            lua.script_file("./data/skill/main.lua",
                 [](lua_State*, sol::protected_function_result pfr) -> decltype(pfr) {
                     sol::error err = pfr;
                     throw std::runtime_error(

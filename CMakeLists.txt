@@ -44,7 +44,7 @@ target_sources(${PROJECT_NAME} PRIVATE
     src/battle/stats.cpp
     src/battle/statuseffect.h
     src/battle/statuseffect.cpp
-    src/util.h
+    src/overload.h
     src/random.h
 )
 
