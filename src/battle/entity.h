@@ -21,12 +21,8 @@ class Controller;
 /// An entity in the battle system, player or NPC
 class Entity {
 public:
-    /// Load a particular entity from a file
-    /// TODO: is this even necessary? or desirable?
-    explicit Entity(std::filesystem::path file);
-
     /// Create an entity of the given kind at the provided level
-    Entity(const std::string& kind, int level);
+    Entity(std::string kind, std::string type, std::string name, int level);
 
     /// Destructor; needed for unique_ptr with abstract type
     ~Entity();
@@ -58,9 +54,19 @@ public:
         return *controller;
     }
 
-    /// Get the kind of the entity
-    [[nodiscard]] std::string getKind() const noexcept {
+    /// Get the kind of entity
+    [[nodiscard]] const std::string& getKind() const noexcept {
         return kind;
+    }
+
+    /// Get the type of entity
+    [[nodiscard]] const std::string& getType() const noexcept {
+        return type;
+    }
+
+    /// Get the name of the entity
+    [[nodiscard]] const std::string& getName() const noexcept {
+        return name;
     }
 
     /// Get the current level of the entity
@@ -162,6 +168,8 @@ private:
 
     /// What kind of entity this is
     std::string kind;
+    std::string type;
+    std::string name;
 
     // housekeeping
     int level;       ///< current level

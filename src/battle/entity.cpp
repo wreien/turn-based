@@ -9,9 +9,9 @@ namespace battle {
 
 // TODO: entity factory functions
 namespace {
-    Stats getEntityStats(const std::string& kind, int level) {
+    Stats getEntityStats(const std::string& kind, const std::string& type, int level) {
         // The raddest scaling you'll ever see
-        if (kind.find("good") != std::string::npos) {
+        if (kind == "default" && type == "good") {
             return {
                 35 * level, // hp
                 2 * level,  // mp
@@ -25,7 +25,7 @@ namespace {
                 5 + level,  // speed
                 { 0 }       // resist
             };
-        } else if (kind.find("evil") != std::string::npos) {
+        } else if (kind == "default" && type == "evil") {
             return {
                 27 * level, // hp
                 3 * level,  // mp
@@ -45,14 +45,13 @@ namespace {
         }
     }
 
-    // TODO
-    Stats getEntityStats(std::filesystem::path file) {
-        (void)file;
-        return {};
-    }
-
-    std::vector<Skill> getEntitySkills(const std::string& kind, int level) {
+    std::vector<Skill> getEntitySkills(
+            const std::string& kind,
+            const std::string& type
+            ,int level)
+    {
         (void)kind;
+        (void)type;
         (void)level;
         std::vector<Skill> skills;
         skills.emplace_back("attack");
@@ -60,12 +59,6 @@ namespace {
         // skills.emplace_back("attack boost");
         // skills.emplace_back("defense break");
         return skills;
-    }
-
-    // TODO
-    std::vector<Skill> getEntitySkills(std::filesystem::path file) {
-        (void)file;
-        return {};
     }
 }
 
@@ -78,33 +71,20 @@ struct NullController : public Controller {
 };
 
 
-Entity::Entity(const std::string& kind, int level)
-    : kind{ kind }
+Entity::Entity(std::string kind_, std::string type_, std::string name_, int level)
+    : kind{ std::move(kind_) }
+    , type{ std::move(type_) }
+    , name{ std::move(name_) }
     , level{ level }
     , exp_to_next{ 0 } // TODO
-    , stats{ getEntityStats(kind, level) }
+    , stats{ getEntityStats(kind, type, level) }
     , hp{ stats.max_hp }
     , mp{ stats.max_mp }
     , tech{ stats.max_tech }
     , effects{ }
-    , skills{ getEntitySkills(kind, level) }
+    , skills{ getEntitySkills(kind, type, level) }
     , controller{ std::make_unique<NullController>() }
 {
-}
-
-Entity::Entity(std::filesystem::path file)
-    : kind{ "<" + file.filename().string() + ">" }
-    , level{ 0 }
-    , exp_to_next{ 0 } // TODO
-    , stats{ getEntityStats(file) }
-    , hp{ stats.max_hp }
-    , mp{ stats.max_mp }
-    , tech{ stats.max_tech }
-    , effects{ }
-    , skills{ getEntitySkills(file) }
-    , controller{ std::make_unique<NullController>() }
-{
-    // TODO: update level here
 }
 
 Entity::~Entity() = default;

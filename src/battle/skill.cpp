@@ -109,6 +109,10 @@ namespace {
                 metatable["stats"] = sol::readonly_property(
                         wrap_entity_fn(&Entity::getStats));
 
+                metatable["getKind"] = wrap_entity_fn(&Entity::getKind);
+                metatable["getType"] = wrap_entity_fn(&Entity::getType);
+                metatable["getName"] = wrap_entity_fn(&Entity::getName);
+
                 metatable["drainHP"]   = wrap_entity_fn(&Entity::drain<Pool::HP>);
                 metatable["drainMP"]   = wrap_entity_fn(&Entity::drain<Pool::MP>);
                 metatable["drainTech"] = wrap_entity_fn(&Entity::drain<Pool::Tech>);
