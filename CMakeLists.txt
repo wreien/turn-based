@@ -83,8 +83,8 @@ endif()
 target_link_libraries(${PROJECT_NAME} lua)
 
 # copy lua script files to the right place
-add_custom_target(copy_lua ALL
+add_custom_target(copy_data ALL
     COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_SOURCE_DIR}/lua
-        $<TARGET_FILE_DIR:${PROJECT_NAME}>/lua
+        ${CMAKE_SOURCE_DIR}/data
+        $<TARGET_FILE_DIR:${PROJECT_NAME}>/data
 )
