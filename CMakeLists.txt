@@ -28,6 +28,8 @@ target_sources(${PROJECT_NAME} PRIVATE
     src/battle/battlesystem.cpp
     src/battle/battlesystem.h
     src/battle/battleview.h
+    src/battle/config.cpp
+    src/battle/config.h
     src/battle/controller.h
     src/battle/element.h
     src/battle/entity.cpp
@@ -39,11 +41,12 @@ target_sources(${PROJECT_NAME} PRIVATE
     src/battle/playercontroller.h
     src/battle/skill.cpp
     src/battle/skill.h
+    src/battle/skilldetails.h
     src/battle/skillref.h
-    src/battle/stats.h
     src/battle/stats.cpp
-    src/battle/statuseffect.h
+    src/battle/stats.h
     src/battle/statuseffect.cpp
+    src/battle/statuseffect.h
     src/overload.h
     src/random.h
 )

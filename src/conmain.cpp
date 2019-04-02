@@ -127,20 +127,21 @@ void handleUserChoice(battle::PlayerController& controller,
 
             int i = 0;
             for (auto&& skill : options.skills) {
-                std::cout << "  " << ++i << ". " << skill->getName();
+                auto& details = skill->getDetails();
+                std::cout << "  " << ++i << ". " << details.getName();
 
                 std::cout << " | elementid = "
-                          << static_cast<int>(skill->getElement());
+                          << static_cast<int>(details.getElement());
 
-                if (auto power = skill->getPower())
+                if (auto power = details.getPower())
                     std::cout << " | power = " << *power;
-                if (auto accuracy = skill->getAccuracy())
+                if (auto accuracy = details.getAccuracy())
                     std::cout << " | accuracy = " << *accuracy;
 
                 {
                     std::cout << " | method = ";
-                    using Method = battle::Skill::Method;
-                    switch (skill->getMethod()) {
+                    using Method = battle::SkillMethod;
+                    switch (details.getMethod()) {
                     case Method::Physical: std::cout << "physical"; break;
                     case Method::Magical:  std::cout << "magical";  break;
                     case Method::Mixed:    std::cout << "mixed";    break;
@@ -150,17 +151,17 @@ void handleUserChoice(battle::PlayerController& controller,
 
                 std::cout << " | cost = ";
                 bool has_cost = false;
-                if (auto hpc = skill->getHPCost(); hpc) {
+                if (auto hpc = details.getHPCost(); hpc) {
                     has_cost = true;
                     std::cout << *hpc << " HP";
                 }
-                if (auto mpc = skill->getMPCost(); mpc) {
+                if (auto mpc = details.getMPCost(); mpc) {
                     if (has_cost)
                         std::cout << " + ";
                     has_cost = true;
                     std::cout << *mpc << " MP";
                 }
-                if (auto tpc = skill->getTechCost(); tpc) {
+                if (auto tpc = details.getTechCost(); tpc) {
                     if (has_cost)
                         std::cout << " + ";
                     has_cost = true;
@@ -267,7 +268,7 @@ void printMessage(const battle::Message& m) {
     std::visit(overload{
         [](const SkillUsed& su) {
             std::cout << su.source.getName() << " used "
-                      << su.skill->getName() << " on "
+                      << su.skill->getDetails().getName() << " on "
                       << su.target.getName() << "!\n";
         },
         [](const PoolChanged& pc) {

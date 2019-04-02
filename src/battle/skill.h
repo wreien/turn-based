@@ -3,9 +3,8 @@
 
 #include <string>
 #include <vector>
-#include <optional>
 #include <memory>
-#include "element.h"
+#include "skilldetails.h"
 
 namespace battle {
 
@@ -18,43 +17,13 @@ class MessageLogger;
 /// TODO: single responsibility principle; this class can be split up
 class Skill {
 public:
-    /// Determines the spread of an attack
-    enum class Spread {
-        Self,    ///< targets source
-        Single,  ///< targets one entity
-        SemiAoE, ///< targets one entity, with spread to rest of their team
-        AoE,     ///< targets a whole team
-        Field,   ///< targets the entire battleground
-    };
-
-    /// Determines the way the skill calculates the effect of power
-    enum class Method {
-        Physical, ///< uses physical stats
-        Magical,  ///< uses magical stats
-        Mixed,    ///< uses weird stats/some combination of the above
-        None,     ///< doesn't use power
-    };
-
-    // TODO: UI category?
-
-public:
     /// Create the a specified skill
-    explicit Skill(const std::string& name);
+    explicit Skill(const std::string& name, int level = 1);
 
     // Explicit move constructors for MSVC
     // see https://stackoverflow.com/questions/54421110/
     Skill(Skill&&) = default;
     Skill& operator=(Skill&&) = default;
-
-    /// Get the display name of the skill
-    [[nodiscard]] const std::string& getName() const noexcept {
-        return name;
-    }
-
-    /// Get the high-level description of what the skill does
-    [[nodiscard]] const std::string& getDescription() const noexcept {
-        return description;
-    }
 
     /// Determines if the skill can currently be used by the provided entity
     [[nodiscard]] bool isUsableBy(const Entity& source) const noexcept;
@@ -64,88 +33,14 @@ public:
     void use(MessageLogger& logger, Entity& source, Entity& target,
              const std::vector<Entity*>& team) const;
 
-public:
-    // costs
-    // TODO: split into component class just with costs and things?
-
-    [[nodiscard]] std::optional<int> getHPCost() const noexcept {
-        return hp_cost;
-    }
-
-    [[nodiscard]] std::optional<int> getMPCost() const noexcept {
-        return mp_cost;
-    }
-
-    [[nodiscard]] std::optional<int> getTechCost() const noexcept {
-        return tech_cost;
-    }
-
-    // TODO item costs
-
-public:
-    // attributes
-    // TODO: split into component class just with attributes and things?
-
-    /// If applicable, get the power of the skill
-    [[nodiscard]] std::optional<int> getPower() const noexcept {
-        return power;
-    }
-
-    /// If applicable, get the percentage chance of scoring a hit with the skill
-    [[nodiscard]] std::optional<int> getAccuracy() const noexcept {
-        return accuracy;
-    }
-
-    /// Get the attack spread (AOE-ness) of the skill
-    [[nodiscard]] Spread getSpread() const noexcept {
-        return spread;
-    }
-
-    /// Get the attack method (source stats used) of the skill
-    [[nodiscard]] Method getMethod() const noexcept {
-        return method;
-    }
-
-    /// Get the primary element associated with the skill.
-    [[nodiscard]] Element getElement() const noexcept {
-        return element;
+    const SkillDetails& getDetails() const noexcept {
+        return details;
     }
 
 private:
-    // pimpl idiom (with custom deleter)
-    struct Data;
-    struct DataDeleter { void operator()(Data*) const noexcept; };
-    std::unique_ptr<Data, DataDeleter> data;
-
     void processCost(MessageLogger& logger, Entity& source) const noexcept;
 
-    // Cache all our info so we don't need to keep polling through Lua for it.
-    // Much of this could well be part of the UI loop, too, so it's beneficial
-    // to keep it fast.
-    //
-    // It's also much simpler, though we do need to remember to keep it up to date.
-    // Given we only have one non-const function at the moment that's not too hard,
-    // and most of the work will be done in `refresh()`
-
-    /// Refresh the cached data for the skill.
-    void refresh();
-
-    std::string name;
-    std::string description;
-    int level;
-    int max_level;
-
-    std::optional<int> power;
-    std::optional<int> accuracy;
-    Spread spread;
-    Method method;
-    Element element;
-
-    std::optional<int> hp_cost;
-    std::optional<int> mp_cost;
-    std::optional<int> tech_cost;
-    // std::vector<Item> item_cost;    // TODO
-
+    SkillDetails details;
     std::vector<std::string> perks_applied;
 };
 
