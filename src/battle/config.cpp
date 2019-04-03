@@ -64,6 +64,9 @@ namespace battle::config {
         metatable["getType"] = wrap_entity_fn(&Entity::getType);
         metatable["getName"] = wrap_entity_fn(&Entity::getName);
 
+        metatable["getLevel"]      = wrap_entity_fn(&Entity::getLevel);
+        metatable["getExperience"] = wrap_entity_fn(&Entity::getExperience);
+
         metatable["drainHP"]   = wrap_entity_fn(&Entity::drain<Pool::HP>);
         metatable["drainMP"]   = wrap_entity_fn(&Entity::drain<Pool::MP>);
         metatable["drainTech"] = wrap_entity_fn(&Entity::drain<Pool::Tech>);
@@ -139,7 +142,7 @@ namespace battle::config {
             [](lua_State*, sol::protected_function_result pfr) -> decltype(pfr) {
                 sol::error err = pfr;
                 throw std::runtime_error(
-                    std::string{"error loading skills: "} + err.what());
+                    std::string{"error loading skill list: "} + err.what());
             }
         );
     }
@@ -230,16 +233,16 @@ namespace battle {
     struct SkillDetails::LuaHandle {
         LuaHandle(const std::string& name, int level) {
             auto lua = config::lua();
-            sol::protected_function fn = lua["Skills"]["get"];
-            auto ret = fn(lua["Skills"], name);
-            if (ret.valid()) {
-                data = ret;
-                for (int i = 1; i < level; i++)
-                    data["levelUp"](data);
-            }
-            else {
-                sol::error err = ret;
-                throw std::invalid_argument(err.what());
+            sol::protected_function fn = lua["skill"]["list"][name];
+            if (!fn.valid())
+                throw std::invalid_argument("unknown skill: " + name);
+            sol::protected_function_result pfr = fn(level);
+            if (pfr.valid()) {
+                data = pfr;
+            } else {
+                sol::error err = pfr;
+                throw std::invalid_argument("error getting skill " + name + " (level " +
+                        std::to_string(level) + ") details: " + err.what());
             }
         }
 
@@ -251,7 +254,7 @@ namespace battle {
     }
 
     SkillDetails::SkillDetails(const std::string& name_, int level_)
-        : handle{ new LuaHandle{ name_, level_ } }
+        : name{ name_ }, level{ level_ }, handle{ new LuaHandle{ name_, level_ } }
     {
         const auto opt = [](sol::table t, const char* c) -> std::optional<int> {
             auto val = t[c];
@@ -268,10 +271,8 @@ namespace battle {
 
         const auto& t = handle->data;
 
-        name = t["name"];
         desc = t["desc"];
-        level = t["level"];
-        max_level = t["max_level"];
+        max_level = t["max_level"].get_or(1);
 
         hp_cost = opt(t, "hp_cost");
         mp_cost = opt(t, "mp_cost");

@@ -1,16 +1,15 @@
 require "skill.base"
-require "skill.perk"
 
-Skills:add{
-    name = "attack",
-    desc = "Perform a basic attack.",
+function skill.list.attack(level)
+    return {
+        desc = "A level-based attacking move.",
 
-    power = 5,
-    method = method.physical,
+        power = 5,
+        method = method.physical,
 
-    perform = function(self, source, target)
-        local mod = self:modifier(source, target)
-        local damage = self:baseDamage(source, target)
-        target:drainHP(math.ceil(mod * damage))
-    end
-}
+        perform = function(self, source, target)
+            -- does damage equal to "skill_level * user_level"
+            target:drainHP(level * source:getLevel())
+        end
+    }
+end

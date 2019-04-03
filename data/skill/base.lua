@@ -1,133 +1,103 @@
+if skill == nil then skill = {} end
+
 -- Skill base functionality
+skill.list = {}
 
-SkillBase = {
-    description = "",
-    level = 1,
-    max_level = 1,
-    perks = {},
-}
-SkillBase.__index = SkillBase
+-- make sure we're getting proper skills
+local skilllist_mt = {}
+setmetatable(skill.list, skilllist_mt)
 
-function SkillBase:new(s)
-    s = s or {}
-    setmetatable(s, self)
-    return s
+-- the skill 's' with name 'name' can have a value 'value'; if so, it's type 'valtype'
+local function optional_value_type(s, name, value, valtype)
+    local t = type(s[value])
+    if t ~= valtype and t ~= "nil" then
+        error("'" .. name .. "." .. value .. "' must be of type '" ..
+              valtype .. "'; got '" .. t .. "'.")
+    end
 end
 
--- perform a level up
-function SkillBase:levelUp()
-    if self.level < self.max_level then
-        self.level = self.level + 1
+-- the skill 's' with name 'name' needs a value 'value' of type 'valtype'
+local function require_value_type(s, name, value, valtype)
+    if not s[value] then
+        error("'" .. name .. "' must provide '" .. value .. "'.")
+    end
+    optional_value_type(s, name, value, valtype)
+end
 
-        -- remove perks temporarily
-        -- makes sure that level ups aren't affected by current perks
-        for i, p in ipairs(self.perks) do
-            p:unapply(self)
+local function optional_value_enum(s, name, value, enum)
+    local r = s[value]
+    if r == nil then
+        return
+    end
+    -- this is ugly, but it's because enums are read-only and hence don't
+    -- actually contain their members for real; we look at the index instead.
+    for k, v in pairs(getmetatable(enum).__index) do
+        if r == v then return end
+    end
+    error("'" .. name .. '.' .. value .. "' must be a member of '" .. value .. "'.")
+end
+
+-- TODO: better way of warning? Can we link with stdout / provide a C++ function?
+local function warn_fractional(s, name, value)
+    local x = s[value]
+    if x ~= nil then
+        local integral, fractional = math.modf(s[value])
+        if fractional ~= 0 then
+            error("'" .. name .. '.' .. value .. "' should be a whole number.")
         end
-
-        -- update my level
-        self:updateLevel()
-
-        -- reapply perks
-        for i, p in ipairs(self.perks) do
-            p:apply(self)
-        end
     end
 end
 
--- override to change stats upon levelling up
-function SkillBase:updateLevel()
-end
-
-
-
-
--- adds a perk to the skill
--- `perk' is the name of a perk given in `perks'
-function SkillBase:addPerk(perk)
-    p = self.perks[perk]
-    if not p then
-        error('"' .. perk .. '" is not a valid perk for skill "' .. self.name .. '"')
+local function make_read_only(func)
+    return function(...)
+        local ret = func(...)
+        return setmetatable({}, {
+            __index = ret,
+            __newindex = function(t, k, v)
+                error("table is read only!")
+            end,
+            __metatable = false
+        })
     end
-    self.applied_perks[perk] = {}  -- can store bonus data here
-    p:apply(self, self.applied_perks[perk])
 end
 
-function SkillBase:hasPerk(perk)
-    return self.applied_perks[perk] ~= nil
-end
-
-function SkillBase:removePerk(perk)
-    if not SkillBase:hasPerk(perk) then
-        error("cannot remove a perk not applied")
-    end
-    p = self.perks[perk]
-    p:unapply(self, self.applied_perks[perk])
-    self.applied_perks[perk] = nil
-end
-
-
-
--- Standard damage calculator
--- Should override/ignore if using an unusual method
-function SkillBase:baseDamage(source, target)
-    local attack = 0
-    local defense = 0
-
-    if self.method == method.physical then
-        attack = source.stats.p_atk
-        defense = target.stats.p_def
-    elseif self.method == method.magical then
-        attack = source.stats.m_atk
-        defense = target.stats.m_def
+skilllist_mt.__newindex = function (table, key, value)
+    if type(value) ~= "function" then
+        error("'skill.list." .. key .. "' must be a function, got " .. type(value))
     end
 
-    return self.power * attack * 2 / (1 + defense)
-end
+    s = value(1)  -- just test for level 1
 
-function SkillBase:modifier(source, target)
-    -- local mod = target.stats:getResistance(self.element)
-    -- hook into perks/buffs
-    return 1
-end
-
-
-
--- perform this skill from source on target with team target_team
-function SkillBase:perform(souce, target, target_team)
-    -- default skill: does nothing (except the cost, of course)
-    error("Should not call this!");
-    return nil
-end
-
-
-
-
--- Manage skill types
-
-Skills = { skills = {} }
-
--- define a new skill type
-function Skills:add(data)
-    if not data.name then
-        error("must provide a skill name")
+    if type(s) ~= "table" then
+        error("'skill.list." .. key .. "()" .. "' must return a table, got " .. type(v))
     end
-    if not data.desc then
-        error("must provide a skill description (\"\" is fine though)")
-    end
-    -- TODO other validation checking
 
-    local s = SkillBase:new(data)
-    s.__index = s
+    require_value_type(s, key, "desc", "string")
+    require_value_type(s, key, "perform", "function")
 
-    self.skills[data.name] = s
+    optional_value_type(s, key, "max_level", "number")
+
+    optional_value_type(s, key, "hp_cost", "number")
+    optional_value_type(s, key, "mp_cost", "number")
+    optional_value_type(s, key, "tech_cost", "number")
+
+    optional_value_type(s, key, "power", "number")
+    optional_value_type(s, key, "accuracy", "number")
+
+    optional_value_enum(s, key, "method", method)
+    optional_value_enum(s, key, "spread", spread)
+    optional_value_enum(s, key, "element", element)
+
+    warn_fractional(s, key, "max_level")
+    warn_fractional(s, key, "hp_cost")
+    warn_fractional(s, key, "mp_cost")
+    warn_fractional(s, key, "tech_cost")
+    warn_fractional(s, key, "power")
+    warn_fractional(s, key, "accuracy")
+
+    -- can't do a direct assignment here; we'll just call __newindex again!
+    rawset(table, key, make_read_only(value))
 end
 
--- construct a new instance of a given skill
-function Skills:get(name)
-    local skill = self.skills[name]
-    if not skill then
-        error("unknown skill '" .. name .. "'")
-    end
-    return skill:new{ applied_perks = {} }
-end
+
+return skill
