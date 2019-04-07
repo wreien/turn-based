@@ -1,13 +1,12 @@
 # Skills
 
 Skills are generated in Lua, and consist of a list of key-value pairs defining
-their functionality.
-
-_Skills_ here more accurately refer to _skill templates_, which construct a
-"type" of a skill that can then be generated and specialised. Individual
-instances of skills can then be modified --- through level-ups, perks, or (if
-you're feeling frisky) directly replacing skill components --- without
-affecting other entities that happen to have the same base skill.
+their functionality. We define in config files the details for a particular
+instance of a skill. This is immutable, and never changes; if anything
+important changes for the skill we regenerate the information with the new
+data. (This means stay away from random values in skill data! --- though in
+the `perform` function it's fine.) A skill's details is uniquely determined by
+the triple "name, level, perks".
 
 The direct owner of a skill isn't necessarily an entity. As a quick list,
 skills can belong to:
@@ -86,8 +85,8 @@ cost of that form.
 
 Apart from `items`, all cost values must be integers (whole numbers); you may
 make use of the "flooring" division operator `//` to ensure this (or otherwise
-use `math.floor(number)`{.lua}) if there is a possibility of creating
-fractional numbers to forcefully round down to the nearest whole number.
+use `math.floor(number)`) if there is a possibility of creating fractional
+numbers to forcefully round down to the nearest whole number.
 
 On the other hand, `items` is a list of items required; specify the same item
 multiple times if necessary, such as:
@@ -121,3 +120,96 @@ must specify this as, for example, `spread.single`.
 
 `element` is any one of the available elements. (See [the elements
 documentation](elements.md).)
+
+## Functionality
+
+To define exactly what the skill does, a data value `perform` must be
+provided. This is a function taking three parameters:
+
+- `self`: me, the skill using the function (and its details)
+- `source`: whoever used the skill in the first place
+- `target`: the entity the skill targeted (or `nil` if `spread.field`)
+
+`self` contains all the data specified in the skill you returned. For example,
+if you returned a skill with 80 power, then `self.power` is 80. Prefer to use
+this value rather than recalculating the desired attributes. The only
+calculated values you might ever need are `level` and `perks`, which are as
+described above.
+
+For details on the API for `source` and `target`, please see [the entity
+documentation](entity.md).
+
+## Example
+
+Here is a detailed example of a skill, demonstrating usage of most of the above.
+
+```lua
+-- we define a skill named "Eruption"
+skill.list["Eruption"] = function(level, perks)
+    -- we set up some defaults
+    local power = 50 + 15 * level
+    local accuracy = 80
+    -- we call it newspread rather than spread so we
+    -- can still access the global enum "spread" later
+    local newspread = spread.semiaoe
+
+    -- we manage our perks
+    if perks["overheat"] then
+        power = power + 20
+        accuracy = accuracy - 10
+    end
+    if perks["even spread"] then
+        -- make sure we end up with a whole number!
+        power = power // 2
+        newspread = spread.aoe
+    end
+
+    -- now we actually provide the data for our skill
+    return {
+        -- for niceness, we'll split the long description over multiple lines
+        desc = "Unleash a volcanic eruption at a target, "
+            .. "damaging their whole team.",
+        maxlevel = 5,
+
+        -- we leave out hp_cost here as it's not relevant
+        mp_cost = 30,
+        tech_cost = 10,
+        -- we need two fire stones to use the skill
+        items = { "fire stone", "fire stone" },
+
+        -- pass in our calculated values
+        power = power,
+        accuracy = accuracy,
+        spread = newspread,
+        method = method.magical,
+        element = element.fire,
+
+        -- provide the function that actually does things
+        perform = function(self, source, target)
+            -- loop through every entity on their team
+            local team = target:getTeam()
+            for index, entity in ipairs(team) do
+                -- get the damage modifier (resistances)
+                -- (see skill helper function documentation for details)
+                local mod = skill.modifier(self, source, entity, target)
+
+                -- get the raw damage dealt (stats)
+                -- (see skill helper function documentation for details)
+                local base = skill.baseDamage(self, source, entity)
+
+                -- we can use perks here too
+                if perks["shrapnel"] then
+                    -- with 20% chance, add 10 "raw" damage
+                    if math.random() < 0.2 then
+                        base = base + 10
+                    end
+                end
+
+                -- actually deal damage
+                -- currently this needs to be a whole number, so we floor it
+                entity:drainHP(math.floor(mod * base))
+            end
+        end
+    }
+end
+```
