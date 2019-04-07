@@ -26,9 +26,9 @@ To specify a skill, declare a function taking `level` and `perks` as follows:
 require "skill.base"
 
 skill.list["Name of Skill"] = function(level, perks)
-  return {
-    -- skill definition here; see below for details.
-  }
+    return {
+        -- skill definition here; see below for details.
+    }
 end
 ```
 
@@ -44,7 +44,7 @@ follows:
 
   ```lua
   if perks["power boost"] then
-    -- do something
+      -- do something
   end
   ```
 
