@@ -18,11 +18,30 @@ namespace battle {
 
 class Controller;
 
+/// Identifies an entity type
+///
+/// `kind` and `type` are enough to determine the stats for an entity uniquely,
+/// and as such the equality comparison for this class does not take `name`
+/// into account.
+struct EntityID {
+    std::string kind; ///< the 'class' of entity; top level specifier
+    std::string type; ///< the 'species' of entity; bottom level specifier
+    std::string name; ///< a unique descriptor for the particular entity
+
+    friend bool operator==(const EntityID& lhs, const EntityID& rhs) noexcept {
+        return lhs.kind == rhs.kind && lhs.type == rhs.type;
+    }
+    friend bool operator!=(const EntityID& lhs, const EntityID& rhs) noexcept {
+        return !(lhs == rhs);
+    }
+};
+
 /// An entity in the battle system, player or NPC
 class Entity {
 public:
-    /// Create an entity of the given kind at the provided level
-    Entity(std::string kind, std::string type, std::string name, int level);
+    /// Construct an entity, with all the requisite info
+    /// (note that Skill is a move-only type, so we propagate that here)
+    Entity(EntityID id, int level, Stats stats, std::vector<Skill>&& skills);
 
     /// Destructor; needed for unique_ptr with abstract type
     ~Entity();
@@ -32,41 +51,32 @@ public:
     /// Disable copy assignment
     Entity& operator=(const Entity&) = delete;
 
-    struct nest_controller_tag {};
-
-    /// Set the (new) contoller for the entity
-    /// Pass Entity::nest_controller_tag{} as the first argument if you
-    /// need the first constructor arg to be the old controller
+    /// Create the (new) contoller for the entity
+    /// If ControllerType's `nest_controller` member is true, then passes
+    /// the old controller to its constructor.
     template <typename ControllerType, typename... Args>
     void assignController(Args&&... args) {
-        controller = std::make_unique<ControllerType>(
+        if constexpr (ControllerType::nest_controller) {
+            controller = std::make_unique<ControllerType>(
+                *this, std::move(controller), std::forward<Args>(args)...);
+        } else {
+            controller = std::make_unique<ControllerType>(
                 *this, std::forward<Args>(args)...);
+        }
     }
 
-    template <typename ControllerType, typename... Args>
-    void assignController(nest_controller_tag, Args&&... args) {
-        controller = std::make_unique<ControllerType>(
-                *this, std::move(controller), std::forward<Args>(args)...);
-    }
+    /// Restore an existing controller as the main one
+    /// TODO: redesign controllers so this function isn't public
+    void restoreController(std::unique_ptr<Controller>&& ctrl) noexcept;
 
     /// Retrieve the entity's controller
     [[nodiscard]] Controller& getController() const noexcept {
         return *controller;
     }
 
-    /// Get the kind of entity
-    [[nodiscard]] const std::string& getKind() const noexcept {
-        return kind;
-    }
-
-    /// Get the type of entity
-    [[nodiscard]] const std::string& getType() const noexcept {
-        return type;
-    }
-
-    /// Get the name of the entity
-    [[nodiscard]] const std::string& getName() const noexcept {
-        return name;
+    /// Get the identifier for the entity
+    const EntityID& getID() const noexcept {
+        return id;
     }
 
     /// Get the current level of the entity
@@ -167,9 +177,7 @@ private:
     }
 
     /// What kind of entity this is
-    std::string kind;
-    std::string type;
-    std::string name;
+    EntityID id;
 
     // housekeeping
     int level;       ///< current level

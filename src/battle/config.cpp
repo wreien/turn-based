@@ -54,15 +54,15 @@ namespace battle::config {
     }
 
     void loadEntityLoggerMetatable(sol::state_view& lua) {
-        auto metatable = lua.new_usertype<EntityLogger>("LoggedEntity",
+        auto metatable = lua.new_usertype<EntityLogger>("logged_entity",
             "new", sol::no_constructor);
 
         metatable["stats"] = sol::readonly_property(
                 wrap_entity_fn(&Entity::getStats));
 
-        metatable["getKind"] = wrap_entity_fn(&Entity::getKind);
-        metatable["getType"] = wrap_entity_fn(&Entity::getType);
-        metatable["getName"] = wrap_entity_fn(&Entity::getName);
+        metatable["getKind"] = [](EntityLogger& el){ return el.entity.getID().kind; };
+        metatable["getType"] = [](EntityLogger& el){ return el.entity.getID().type; };
+        metatable["getName"] = [](EntityLogger& el){ return el.entity.getID().name; };
 
         metatable["getLevel"]      = wrap_entity_fn(&Entity::getLevel);
         metatable["getExperience"] = wrap_entity_fn(&Entity::getExperience);
@@ -81,7 +81,7 @@ namespace battle::config {
     }
 
     void loadStatsMetatable(sol::state_view& lua) {
-        auto metatable = lua.new_usertype<Stats>("Stats");
+        auto metatable = lua.new_usertype<Stats>("stats");
 
         metatable["max_hp"]   = &Stats::max_hp,
         metatable["max_mp"]   = &Stats::max_mp,
@@ -222,7 +222,7 @@ namespace battle {
 
             return std::make_tuple(stats, std::move(skills));
         }
-        throw std::invalid_argument("That's not a real entity type :(");
+        throw std::invalid_argument(kind + ":" + type + " is not a real entity type");
     }
 
 }

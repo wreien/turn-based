@@ -12,7 +12,7 @@ struct BattleView;
 // Interface for getting actions from an entity
 class Controller {
 public:
-    virtual ~Controller() = default;
+    virtual ~Controller() = 0;  // defined in entity.cpp
 
     // Given the current state of the battlefield, make a decision as to what to do
     //

@@ -14,16 +14,10 @@ class MessageLogger;
 
 
 /// Encapsulates a skill
-/// TODO: single responsibility principle; this class can be split up
 class Skill {
 public:
     /// Create the a specified skill
     explicit Skill(const std::string& name, int level = 1);
-
-    // Explicit move constructors for MSVC
-    // see https://stackoverflow.com/questions/54421110/
-    Skill(Skill&&) = default;
-    Skill& operator=(Skill&&) = default;
 
     /// Determines if the skill can currently be used by the provided entity
     [[nodiscard]] bool isUsableBy(const Entity& source) const noexcept;

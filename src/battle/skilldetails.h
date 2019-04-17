@@ -40,6 +40,8 @@ class SkillDetails {
 public:
     SkillDetails(const std::string& name, int level);
 
+    // TODO: make copyable? (possible, but do we want to is the question)
+
     [[nodiscard]] const std::string& getName() const noexcept { return name; }
     [[nodiscard]] const std::string& getDescription() const noexcept { return desc; }
     [[nodiscard]] int getLevel() const noexcept { return level; }

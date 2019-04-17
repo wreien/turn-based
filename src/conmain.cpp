@@ -9,6 +9,7 @@
 
 #include "battle/battlesystem.h"
 #include "battle/entity.h"
+#include "battle/config.h"
 #include "battle/npccontroller.h"
 #include "battle/playercontroller.h"
 #include "overload.h"
@@ -42,6 +43,11 @@ T getInput(std::string_view errormsg = "Invalid input!\n> ") {
     return getInput<T>([](auto){ return true; }, errormsg);
 }
 
+battle::EntityID genEntityID(const std::string& kind, const std::string& type, int id) {
+    std::string name = kind + " " + type + " #" + std::to_string(id);
+    return battle::EntityID { kind, type, std::move(name) };
+}
+
 auto init() {
     using battle::Team;
 
@@ -53,24 +59,28 @@ auto init() {
     std::cout << "How many enemies?\n> ";
     enemies = getInput<int>();
 
+    std::string kind = "default";
+    std::string blue_type = "good";
+    std::string red_type = "evil";
+
     std::vector<std::shared_ptr<battle::Entity>> blue;
     for (int i = 0; i < players; ++i) {
+        auto [blue_stats, blue_skills] = battle::getEntityDetails(kind, blue_type, 1);
         auto e = std::make_shared<battle::Entity>(
-                "default",
-                "good",
-                "default good #" + std::to_string(i + 1),
-                1);
+            genEntityID(kind, blue_type, i + 1),
+            1, blue_stats, std::move(blue_skills)
+        );
         e->assignController<battle::PlayerController>();
         blue.push_back(std::move(e));
     }
 
     std::vector<std::shared_ptr<battle::Entity>> red;
     for (int i = 0; i < enemies; ++i) {
+        auto [red_stats, red_skills] = battle::getEntityDetails(kind, red_type, 1);
         auto e = std::make_shared<battle::Entity>(
-                "default",
-                "evil",
-                "default evil #" + std::to_string(i + 1),
-                1);
+            genEntityID(kind, red_type, i + 1),
+            1, red_stats, std::move(red_skills)
+        );
         e->assignController<battle::NPCController>();
         red.push_back(std::move(e));
     }
@@ -83,7 +93,8 @@ void drawEntity(const battle::Entity& entity) {
     constexpr auto MP   = battle::Pool::MP;
     constexpr auto Tech = battle::Pool::Tech;
 
-    std::cout << "\"" << entity.getName() << "\" level " << entity.getLevel() << " | "
+    std::cout << "\"" << entity.getID().name << "\" "
+              << "level " << entity.getLevel() << " | "
               << "HP: " << entity.get<HP>() << "/" << entity.getMax<HP>() << " | "
               << "MP: " << entity.get<MP>() << "/" << entity.getMax<MP>() << " | "
               << "Tech: " << entity.get<Tech>() << "/" << entity.getMax<Tech>() << "\n";
@@ -216,7 +227,7 @@ void handleUserChoice(battle::PlayerController& controller,
         auto printStat = [](auto stat){ return std::string(stat, '*'); };
         auto& e = controller.getEntity();
         battle::Stats s = e.getStats();
-        std::cout << "Stats for " << e.getName() << ":\n";
+        std::cout << "Stats for " << e.getID().name << ":\n";
         std::cout
             << "  - HP:     " << e.get<P::HP>() << "/" << e.getMax<P::HP>() << "\n"
             << "  - MP:     " << e.get<P::MP>() << "/" << e.getMax<P::MP>() << "\n"
@@ -248,7 +259,7 @@ void handleUserChoice(battle::PlayerController& controller,
         return {};
     });
 
-    std::cout << "===\nWhat will " << controller.getEntity().getName() << " do?\n";
+    std::cout << "===\nWhat will " << controller.getEntity().getID().name << " do?\n";
     for (auto&& [id, msg, fn] : choice)
         std::cout << " - " <<  msg << "\n";
     std::cout << "> ";
@@ -267,39 +278,41 @@ void printMessage(const battle::Message& m) {
     using namespace battle::message;
     std::visit(overload{
         [](const SkillUsed& su) {
-            std::cout << su.source.getName() << " used "
+            std::cout << su.source.getID().name << " used "
                       << su.skill->getDetails().getName() << " on "
-                      << su.target.getName() << "!\n";
+                      << su.target.getID().name << "!\n";
         },
         [](const PoolChanged& pc) {
-            auto diff = pc.new_value - pc.old_value;
+            const auto name = pc.entity.getID().name;
+            const auto diff = pc.new_value - pc.old_value;
             std::string poolname = (pc.pool == battle::Pool::HP)
                 ? "HP" : ((pc.pool == battle::Pool::MP) ? "MP" : "Tech");
             if (diff < 0) {
-                std::cout << pc.entity.getName() << " lost "
+                std::cout << name << " lost "
                           << -diff << " " << poolname << "!\n";
             } else if (diff > 0) {
-                std::cout << pc.entity.getName() << " restored "
+                std::cout << name << " restored "
                           << diff << " " << poolname << "!\n";
             } else {
-                std::cout << pc.entity.getName() << "'s "
+                std::cout << name << "'s "
                           << poolname << " remained unchanged.\n";
             }
         },
         [](const StatusEffect& e) {
+            const auto name = e.entity.getID().name;
             if (e.applied) {
-                std::cout << e.entity.getName() << " is now affected by "
+                std::cout << name << " is now affected by "
                           << e.effect << "!\n";
             } else {
-                std::cout << e.entity.getName() << "'s "
+                std::cout << name << "'s "
                           << e.effect << " wore off.\n";
             }
         },
         [](const Defended& d) {
-            std::cout << d.entity.getName() << " is defending!\n";
+            std::cout << d.entity.getID().name << " is defending!\n";
         },
         [](const Fled& f) {
-            std::cout << f.entity.getName() << " attempted to flee";
+            std::cout << f.entity.getID().name << " attempted to flee";
             if (f.succeeded)
                 std::cout << ", and succeeded!\n";
             else

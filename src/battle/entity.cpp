@@ -9,35 +9,41 @@
 namespace battle {
 
 
+// we'll put the controller's destructor here, since it doesn't have a CPP file
+// of its own, to prevent creation of bonus virtual tables
+// TODO: double check this is actually needed: this is a half-formed memory
+Controller::~Controller() {}
+
+
 // A no-effort controller that simply defends every turn
 struct NullController : public Controller {
+    static constexpr bool nest_controller = false;
+
     virtual Action go(const BattleView&) {
         return action::Defend{};
     }
 };
 
 
-Entity::Entity(std::string kind_, std::string type_, std::string name_, int level)
-    : kind{ std::move(kind_) }
-    , type{ std::move(type_) }
-    , name{ std::move(name_) }
+Entity::Entity(EntityID id, int level, Stats stats, std::vector<Skill>&& skills)
+    : id { std::move(id) }
     , level{ level }
-    , exp_to_next{ 0 } // TODO
-    , stats{ }
-    , hp{ }
-    , mp{ }
-    , tech{ }
+    , exp_to_next{ 0 }
+    , stats{ stats }
+    , hp{ this->stats.max_hp }
+    , mp{ this->stats.max_mp }
+    , tech{ this->stats.max_tech }
     , effects{ }
-    , skills{ }
+    , skills{ std::move(skills) }
     , controller{ std::make_unique<NullController>() }
 {
-    std::tie(stats, skills) = getEntityDetails(kind, type, level);
-    hp = stats.max_hp;
-    mp = stats.max_mp;
-    tech = stats.max_tech;
 }
 
 Entity::~Entity() = default;
+
+void Entity::restoreController(std::unique_ptr<Controller>&& ctrl) noexcept {
+    controller = std::move(ctrl);
+}
 
 std::vector<SkillRef> Entity::getSkills() const {
     // TODO: apply equipment bonuses, status effects, etc.
