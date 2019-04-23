@@ -1,6 +1,7 @@
 #include "skill.h"
 #include "entity.h"
 #include "messages.h"
+#include "battleview.h"
 
 namespace battle {
 
@@ -24,11 +25,11 @@ bool Skill::isUsableBy(const Entity& source) const noexcept {
 void Skill::use(MessageLogger& logger,
                 Entity& source,
                 Entity& target,
-                const std::vector<Entity*>& team) const
+                const BattleView& view) const
 {
     logger.appendMessage(message::SkillUsed{ *this, source, target });
     processCost(logger, source);
-    details.perform(logger, source, target, team);
+    details.perform(logger, source, target, view);
 }
 
 void Skill::processCost(MessageLogger& logger, Entity& source) const noexcept {

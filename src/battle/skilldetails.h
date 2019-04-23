@@ -12,6 +12,7 @@ namespace battle {
 
 class MessageLogger;
 class Entity;
+struct BattleView;
 
 
 /// Determines the spread of an attack
@@ -59,12 +60,11 @@ private:
     // perform should only be seeable by Skill
     friend class Skill;
 
-    /// Source uses this skill on Target (and their team). Log all events to logger.
-    /// TODO: other information needed to be passed in (e.g. perks, environment)
+    /// Source uses this skill on target (and their team). Log all events to logger.
     /// NOTE: not noexcept! (TODO: return sensible exceptions)
     void perform(MessageLogger& logger,
                  Entity& source, Entity& target,
-                 const std::vector<Entity*>& target_team) const;
+                 const BattleView& view) const;
 
     // details
     std::string name;

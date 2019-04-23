@@ -3,6 +3,7 @@
 #include "skill.h"
 #include "entity.h"
 #include "stats.h"
+#include "battleview.h"
 
 #include <type_traits>
 
@@ -13,14 +14,16 @@
 namespace battle::config {
 
     struct EntityLogger {
-        EntityLogger(Entity& e, MessageLogger& l)
-            : entity{ e }, logger{ l }
+        using Team = std::vector<Entity*>;
+        EntityLogger(Entity* e, const Team* t, MessageLogger* l)
+            : entity{ e }, team{ t }, logger{ l }
         {}
 
-        operator Entity&() noexcept { return entity; }
+        operator Entity&() noexcept { return *entity; }
 
-        Entity& entity;
-        MessageLogger& logger;
+        Entity* entity;
+        const Team* team;
+        MessageLogger* logger;
     };
 
     // TODO: noexcept part of type (but can I really be bothered...)
@@ -28,28 +31,28 @@ namespace battle::config {
     template <typename Ret, typename... Args>
     auto wrap_entity_fn(Ret (Entity::* ptr)(MessageLogger&, Args...)) {
         return [ptr](EntityLogger& self, Args&&... args) {
-            return (self.entity.*ptr)(self.logger, std::forward<Args>(args)...);
+            return (self.entity->*ptr)(*self.logger, std::forward<Args>(args)...);
         };
     }
 
     template <typename Ret, typename... Args>
     auto wrap_entity_fn(Ret (Entity::* ptr)(MessageLogger&, Args...) const) {
         return [ptr](EntityLogger& self, Args&&... args) {
-            return (self.entity.*ptr)(self.logger, std::forward<Args>(args)...);
+            return (self.entity->*ptr)(*self.logger, std::forward<Args>(args)...);
         };
     }
 
     template <typename Ret, typename... Args>
     auto wrap_entity_fn(Ret (Entity::* ptr)(Args...)) {
         return [ptr](EntityLogger& self, Args&&... args) {
-            return (self.entity.*ptr)(std::forward<Args>(args)...);
+            return (self.entity->*ptr)(std::forward<Args>(args)...);
         };
     }
 
     template <typename Ret, typename... Args>
     auto wrap_entity_fn(Ret (Entity::* ptr)(Args...) const) {
         return [ptr](EntityLogger& self, Args&&... args) {
-            return (self.entity.*ptr)(std::forward<Args>(args)...);
+            return (self.entity->*ptr)(std::forward<Args>(args)...);
         };
     }
 
@@ -60,9 +63,9 @@ namespace battle::config {
         metatable["stats"] = sol::readonly_property(
                 wrap_entity_fn(&Entity::getStats));
 
-        metatable["getKind"] = [](EntityLogger& el){ return el.entity.getID().kind; };
-        metatable["getType"] = [](EntityLogger& el){ return el.entity.getID().type; };
-        metatable["getName"] = [](EntityLogger& el){ return el.entity.getID().name; };
+        metatable["getKind"] = [](EntityLogger& el){ return el.entity->getID().kind; };
+        metatable["getType"] = [](EntityLogger& el){ return el.entity->getID().type; };
+        metatable["getName"] = [](EntityLogger& el){ return el.entity->getID().name; };
 
         metatable["getLevel"]      = wrap_entity_fn(&Entity::getLevel);
         metatable["getExperience"] = wrap_entity_fn(&Entity::getExperience);
@@ -78,6 +81,16 @@ namespace battle::config {
         metatable["getHP"]   = wrap_entity_fn(&Entity::get<Pool::HP>);
         metatable["getMP"]   = wrap_entity_fn(&Entity::get<Pool::MP>);
         metatable["getTech"] = wrap_entity_fn(&Entity::get<Pool::Tech>);
+
+        metatable["getTeam"] = [](EntityLogger& el) {
+            // create a new logged entity for every member in the team
+            std::vector<EntityLogger> v;
+            v.reserve(el.team->size());
+            for (Entity* e : *el.team) {
+                v.emplace_back(e, el.team, el.logger);
+            }
+            return v;
+        };
     }
 
     void loadStatsMetatable(sol::state_view& lua) {
@@ -288,11 +301,10 @@ namespace battle {
 
     void SkillDetails::perform(MessageLogger& logger,
             Entity& source, Entity& target,
-            const std::vector<Entity*>& target_team) const
+            const BattleView& view) const
     {
-        config::EntityLogger src{ source, logger };
-        config::EntityLogger tgt{ target, logger };
-        (void) target_team; // TODO
+        config::EntityLogger src{ &source, &view.allies,  &logger };
+        config::EntityLogger tgt{ &target, &view.enemies, &logger };
 
         sol::protected_function perform = handle->data["perform"];
         auto ret = perform(handle->data, src, tgt);
@@ -306,7 +318,3 @@ namespace battle {
     }
 
 }
-
-
-
-
