@@ -50,6 +50,7 @@ inline std::string to_string(Pool pool) noexcept {
     case Pool::MP: return "MP";
     case Pool::Tech: return "Tech";
     }
+    return "?";
 }
 
 /// Lists all the different options for a stat modifier

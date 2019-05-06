@@ -1,112 +1,49 @@
 #include "entity.h"
 #include "controller.h"
 #include "messages.h"
+#include "config.h"
 #include <iterator>
+#include <algorithm>
+
 
 namespace battle {
 
 
-// TODO: entity factory functions
-namespace {
-    Stats getEntityStats(const std::string& kind, int level) {
-        // The raddest scaling you'll ever see
-        if (kind.find("good") != std::string::npos) {
-            return {
-                35 * level, // hp
-                2 * level,  // mp
-                10,         // tech
-                3 * level,  // p_atk
-                2 * level,  // p_def
-                2 * level,  // m_atk
-                3 * level,  // m_def
-                5,          // skill
-                5,          // evade
-                5 + level,  // speed
-                { 0 }       // resist
-            };
-        } else if (kind.find("evil") != std::string::npos) {
-            return {
-                27 * level, // hp
-                3 * level,  // mp
-                10,         // tech
-                2 * level,  // p_atk
-                2 * level,  // p_def
-                3 * level,  // m_atk
-                2 * level,  // m_def
-                5,          // skill
-                5,          // evade
-                6 + level,  // speed
-                { 0 }       // resist
-            };
-        } else {
-            // who even cares
-            return {};
-        }
-    }
-
-    // TODO
-    Stats getEntityStats(std::filesystem::path file) {
-        (void)file;
-        return {};
-    }
-
-    std::vector<Skill> getEntitySkills(const std::string& kind, int level) {
-        (void)kind;
-        (void)level;
-        std::vector<Skill> skills;
-        skills.emplace_back("attack");
-        skills.emplace_back("heal");
-        skills.emplace_back("attack boost");
-        skills.emplace_back("defense break");
-        return skills;
-    }
-
-    // TODO
-    std::vector<Skill> getEntitySkills(std::filesystem::path file) {
-        (void)file;
-        return {};
-    }
-}
+// we'll put the controller's destructor here, since it doesn't have a CPP file
+// of its own, to prevent creation of bonus virtual tables
+// TODO: double check this is actually needed: this is a half-formed memory
+Controller::~Controller() {}
 
 
 // A no-effort controller that simply defends every turn
 struct NullController : public Controller {
+    static constexpr bool nest_controller = false;
+
     virtual Action go(const BattleView&) {
         return action::Defend{};
     }
 };
 
 
-Entity::Entity(const std::string& kind, int level)
-    : kind{ kind }
+Entity::Entity(EntityID id, int level, Stats stats, std::vector<Skill>&& skills)
+    : id { std::move(id) }
     , level{ level }
-    , exp_to_next{ 0 } // TODO
-    , stats{ getEntityStats(kind, level) }
-    , hp{ stats.max_hp }
-    , mp{ stats.max_mp }
-    , tech{ stats.max_tech }
+    , exp_to_next{ 0 }
+    , stats{ stats }
+    , hp{ this->stats.max_hp }
+    , mp{ this->stats.max_mp }
+    , tech{ this->stats.max_tech }
     , effects{ }
-    , skills{ getEntitySkills(kind, level) }
+    , skills{ std::move(skills) }
     , controller{ std::make_unique<NullController>() }
 {
-}
-
-Entity::Entity(std::filesystem::path file)
-    : kind{ "<" + file.filename().string() + ">" }
-    , level{ 0 }
-    , exp_to_next{ 0 } // TODO
-    , stats{ getEntityStats(file) }
-    , hp{ stats.max_hp }
-    , mp{ stats.max_mp }
-    , tech{ stats.max_tech }
-    , effects{ }
-    , skills{ getEntitySkills(file) }
-    , controller{ std::make_unique<NullController>() }
-{
-    // TODO: update level here
 }
 
 Entity::~Entity() = default;
+
+void Entity::restoreController(std::unique_ptr<Controller>&& ctrl) noexcept {
+    controller = std::move(ctrl);
+}
 
 std::vector<SkillRef> Entity::getSkills() const {
     // TODO: apply equipment bonuses, status effects, etc.

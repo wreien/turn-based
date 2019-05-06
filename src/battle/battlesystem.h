@@ -33,7 +33,6 @@ public:
     /// with an outside game.
     using EntityRef = std::shared_ptr<Entity>;
 
-    explicit BattleSystem();
     explicit BattleSystem(const std::vector<EntityRef>& blues,
                           const std::vector<EntityRef>& reds);
 

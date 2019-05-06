@@ -30,6 +30,7 @@ std::string StatusEffect::getName() const noexcept {
     case S::AttackBoost:  return "attack boost";
     case S::DefenseBreak: return "defense break";
     }
+    return "?";
 }
 
 EffectDuration StatusEffect::getEffectDuration() const noexcept {

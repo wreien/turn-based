@@ -23,6 +23,8 @@ struct UserOptions {
 /// The controller for interfacing human interaction with an entity
 class PlayerController : public Controller {
 public:
+    static constexpr bool nest_controller = false;
+
     explicit PlayerController(Entity& entity);
     [[nodiscard]] virtual Action go(const BattleView& view) override;
 

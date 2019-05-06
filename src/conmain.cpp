@@ -9,10 +9,11 @@
 
 #include "battle/battlesystem.h"
 #include "battle/entity.h"
+#include "battle/config.h"
 #include "battle/npccontroller.h"
 #include "battle/playercontroller.h"
 #include "conutil.h"
-#include "util.h"
+#include "overload.h"
 
 // TODO: do these actually work on Windows? This is so dodgy...
 constexpr const char red_colour[]    = "\033[31m";
@@ -50,6 +51,11 @@ T getInput(std::string_view errmsg = "\033[1;33mInvalid input!\n> \033[0m") {
     return getInput<T>([](auto){ return true; }, errmsg);
 }
 
+battle::EntityID genEntityID(const std::string& kind, const std::string& type, int id) {
+    std::string name = kind + " " + type + " #" + std::to_string(id);
+    return battle::EntityID { kind, type, std::move(name) };
+}
+
 auto init() {
     using battle::Team;
 
@@ -62,20 +68,28 @@ auto init() {
     std::cout << bold_colour << "How many enemies?\n> " << reset_colour;
     enemies = getInput<int>();
 
+    std::string kind = "default";
+    std::string blue_type = "good";
+    std::string red_type = "evil";
+
     std::vector<std::shared_ptr<battle::Entity>> blue;
     for (int i = 0; i < players; ++i) {
+        auto [blue_stats, blue_skills] = battle::getEntityDetails(kind, blue_type, 1);
         auto e = std::make_shared<battle::Entity>(
-            std::string{blue_colour} + "default good #" +
-                std::to_string(i + 1) + reset_colour, 1);
+            genEntityID(kind, blue_type, i + 1),
+            1, blue_stats, std::move(blue_skills)
+        );
         e->assignController<battle::PlayerController>();
         blue.push_back(std::move(e));
     }
 
     std::vector<std::shared_ptr<battle::Entity>> red;
     for (int i = 0; i < enemies; ++i) {
+        auto [red_stats, red_skills] = battle::getEntityDetails(kind, red_type, 1);
         auto e = std::make_shared<battle::Entity>(
-            std::string{red_colour} + "default evil #" +
-                std::to_string(i + 1) + reset_colour, 1);
+            genEntityID(kind, red_type, i + 1),
+            1, red_stats, std::move(red_skills)
+        );
         e->assignController<battle::NPCController>();
         red.push_back(std::move(e));
     }
@@ -88,7 +102,8 @@ void drawEntity(const battle::Entity& entity) {
     constexpr auto MP   = battle::Pool::MP;
     constexpr auto Tech = battle::Pool::Tech;
 
-    std::cout << "\"" << entity.getKind() << "\" level " << entity.getLevel() << " | "
+    std::cout << "\"" << entity.getID().name << "\" "
+              << "level " << entity.getLevel() << " | "
               << "HP: " << entity.get<HP>() << "/" << entity.getMax<HP>() << " | "
               << "MP: " << entity.get<MP>() << "/" << entity.getMax<MP>() << " | "
               << "Tech: " << entity.get<Tech>() << "/" << entity.getMax<Tech>() << "\n";
@@ -135,35 +150,51 @@ void handleUserChoice(battle::PlayerController& controller,
 
             int i = 0;
             for (auto&& skill : options.skills) {
+                auto& details = skill->getDetails();
                 std::cout << bold_colour << "  " << ++i << ". " << reset_colour
-                          << yellow_colour << skill->getName() << reset_colour;
+                          << yellow_colour << details.getName() << reset_colour;
 
                 std::cout << " | elementid = "
-                          << static_cast<int>(skill->getElement());
+                          << static_cast<int>(details.getElement());
 
-                if (auto power = skill->getPower())
+                if (auto power = details.getPower())
                     std::cout << " | power = " << *power;
-                if (auto accuracy = skill->getAccuracy())
+                if (auto accuracy = details.getAccuracy())
                     std::cout << " | accuracy = " << *accuracy;
 
                 {
                     std::cout << " | method = ";
-                    using battle::skill::Method;
-                    switch (skill->getMethod()) {
+                    using Method = battle::SkillMethod;
+                    switch (details.getMethod()) {
                     case Method::Physical: std::cout << "physical"; break;
                     case Method::Magical:  std::cout << "magical";  break;
-                    case Method::Neither:  std::cout << "status";   break;
+                    case Method::Mixed:    std::cout << "mixed";    break;
+                    case Method::None:     std::cout << "status";   break;
                     }
                 }
 
-                std::cout << " | cost = " << skill->getCostDescription();
+                std::cout << " | cost = ";
+                bool has_cost = false;
+                if (auto hpc = details.getHPCost(); hpc) {
+                    has_cost = true;
+                    std::cout << *hpc << " HP";
+                }
+                if (auto mpc = details.getMPCost(); mpc) {
+                    if (has_cost)
+                        std::cout << " + ";
+                    has_cost = true;
+                    std::cout << *mpc << " MP";
+                }
+                if (auto tpc = details.getTechCost(); tpc) {
+                    if (has_cost)
+                        std::cout << " + ";
+                    has_cost = true;
+                    std::cout << *tpc << " TP";
+                }
+                if (!has_cost)
+                    std::cout << "none";
 
                 std::cout << "\n";
-
-                for (auto&& desc : skill->getModifierDescriptions())
-                    std::cout << "      - " << desc << "\n";
-                for (auto&& desc : skill->getUseEffectDescriptions())
-                    std::cout << "      - " << desc << "\n";
             }
             std::cout << bold_colour << "> " << reset_colour;
 
@@ -209,7 +240,7 @@ void handleUserChoice(battle::PlayerController& controller,
         auto printStat = [](auto stat){ return std::string(stat, '*'); };
         auto& e = controller.getEntity();
         battle::Stats s = e.getStats();
-        std::cout << bold_colour << "Stats for " << e.getKind() << ":\n";
+        std::cout << bold_colour << "Stats for " << e.getID().name << ":\n";
         std::cout << reset_colour
             << "  - HP:     " << e.get<P::HP>() << "/" << e.getMax<P::HP>() << "\n"
             << "  - MP:     " << e.get<P::MP>() << "/" << e.getMax<P::MP>() << "\n"
@@ -243,8 +274,9 @@ void handleUserChoice(battle::PlayerController& controller,
     });
 
     std::cout << bold_colour;
-    std::cout << "===\nWhat will " << controller.getEntity().getKind() << " do?\n";
+    std::cout << "===\nWhat will " << controller.getEntity().getID().name << " do?\n";
     std::cout << reset_colour;
+
     for (auto&& [id, msg, fn] : choice)
         std::cout << " - " << msg << "\n";
     std::cout << bold_colour << "> " << reset_colour;
@@ -263,50 +295,48 @@ void printMessage(const battle::Message& m) {
     using namespace battle::message;
     std::visit(overload{
         [](const SkillUsed& su) {
-            std::cout << su.source.getKind() << " used "
-                      << yellow_colour << su.skill->getName() << reset_colour << " on "
-                      << su.target.getKind() << "!\n";
+            std::cout << su.source.getID().name << " used "
+                      << yellow_colour << su.skill->getDetails().getName()
+                      << reset_colour << " on " << su.target.getID().name << "!\n";
         },
         [](const PoolChanged& pc) {
-            auto diff = pc.new_value - pc.old_value;
+            const auto name = pc.entity.getID().name;
+            const auto diff = pc.new_value - pc.old_value;
             std::string poolname = (pc.pool == battle::Pool::HP)
                 ? "HP" : ((pc.pool == battle::Pool::MP) ? "MP" : "Tech");
             if (diff < 0) {
-                std::cout << pc.entity.getKind() << " lost "
-                          << yellow_colour << -diff << " " << poolname
-                          << reset_colour << "!\n";
+                std::cout << name << " lost " << yellow_colour
+                          << -diff << " " << poolname << reset_colour << "!\n";
             } else if (diff > 0) {
-                std::cout << pc.entity.getKind() << " restored "
-                          << yellow_colour << diff << " " << poolname
-                          << reset_colour << "!\n";
+                std::cout << name << " restored " << yellow_colour
+                          << diff << " " << poolname << reset_colour << "!\n";
             } else {
-                std::cout << pc.entity.getKind() << "'s "
-                          << poolname << " remained " << yellow_colour
-                          << "unchanged" << reset_colour << ".\n";
+                std::cout << name << "'s " << poolname << " remained "
+                          << yellow_colour << "unchanged" << reset_colour << ".\n";
             }
         },
         [](const StatusEffect& e) {
+            const auto name = e.entity.getID().name;
             if (e.applied) {
-                std::cout << e.entity.getKind() << " is now affected by "
-                          << yellow_colour << e.effect << reset_colour << "!\n";
+                std::cout << name << " is now affected by " << yellow_colour
+                          << e.effect << reset_colour << "!\n";
             } else {
-                std::cout << e.entity.getKind() << "'s "
-                          << yellow_colour << e.effect << reset_colour << " wore off.\n";
+                std::cout << name << "'s " << yellow_colour
+                          << e.effect << reset_colour << " wore off.\n";
             }
         },
         [](const Defended& d) {
-            std::cout << d.entity.getKind() << " is " << yellow_colour
+            std::cout << d.entity.getID().name << " is " << yellow_colour
                       << "defending" << reset_colour << "!\n";
         },
         [](const Fled& f) {
-            std::cout << f.entity.getKind() << " attempted to flee";
-            if (f.succeeded) {
-                std::cout << ", and " << yellow_colour << "succeeded"
-                          << reset_colour << "!\n";
-            } else {
-                std::cout << "... but " << yellow_colour << "failed"
-                          << reset_colour << ".\n";
-            }
+            std::cout << f.entity.getID().name << " attempted to flee";
+            if (f.succeeded)
+                std::cout << ", and " << yellow_colour
+                          << "succeeded" << reset_colour << "!\n";
+            else
+                std::cout << "... but " << yellow_colour
+                          << "failed" << reset_colour << ".\n";
         },
         [](const Notification& n) {
             std::cout << n.message << "\n";

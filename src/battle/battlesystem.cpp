@@ -4,16 +4,9 @@
 #include "controller.h"
 #include "battleview.h"
 #include "entity.h"
-#include "../util.h"
+#include "../overload.h"
 
 namespace battle {
-
-BattleSystem::BattleSystem()
-    : combatants{}
-    , turn_order{}
-    , current_turn{ std::end(turn_order) }
-{
-}
 
 BattleSystem::BattleSystem(const std::vector<EntityRef>& blues,
                            const std::vector<EntityRef>& reds)
@@ -128,7 +121,7 @@ TurnInfo BattleSystem::doTurn() {
                 [&s](auto&& c){ return c.entity.get() == &s.target; }
             );
             if (it != std::end(combatants)) {
-                s.skill->use(logger, *c.entity, *it->entity, getEntities(it->team));
+                s.skill->use(logger, *c.entity, *it->entity, *this);
                 turnFinished = true;
             } else {
                 throw std::invalid_argument(
