@@ -12,7 +12,7 @@ namespace battle {
 
 class MessageLogger;
 class Entity;
-struct BattleView;
+class BattleSystem;
 
 
 /// Determines the spread of an attack
@@ -56,16 +56,13 @@ public:
     [[nodiscard]] SkillMethod getMethod() const noexcept { return method; }
     [[nodiscard]] Element getElement() const noexcept { return element; }
 
-private:
-    // perform should only be seeable by Skill
-    friend class Skill;
-
-    /// Source uses this skill on target (and their team). Log all events to logger.
+    /// Source uses this skill on target. Log all events to logger.
     /// NOTE: not noexcept! (TODO: return sensible exceptions)
     void perform(MessageLogger& logger,
                  Entity& source, Entity& target,
-                 const BattleView& view) const;
+                 BattleSystem& system) const;
 
+private:
     // details
     std::string name;
     std::string desc;

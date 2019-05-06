@@ -121,7 +121,7 @@ TurnInfo BattleSystem::doTurn() {
                 [&s](auto&& c){ return c.entity.get() == &s.target; }
             );
             if (it != std::end(combatants)) {
-                s.skill->use(logger, *c.entity, *it->entity, view);
+                s.skill->use(logger, *c.entity, *it->entity, *this);
                 turnFinished = true;
             } else {
                 throw std::invalid_argument(

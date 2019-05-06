@@ -3,7 +3,7 @@
 #include "skill.h"
 #include "entity.h"
 #include "stats.h"
-#include "battleview.h"
+#include "battlesystem.h"
 
 #include <type_traits>
 
@@ -14,15 +14,14 @@
 namespace battle::config {
 
     struct EntityLogger {
-        using Team = std::vector<Entity*>;
-        EntityLogger(Entity* e, const Team* t, MessageLogger* l)
-            : entity{ e }, team{ t }, logger{ l }
+        EntityLogger(Entity* e, BattleSystem* s, MessageLogger* l)
+            : entity{ e }, system{ s }, logger{ l }
         {}
 
         operator Entity&() noexcept { return *entity; }
 
         Entity* entity;
-        const Team* team;
+        BattleSystem* system;
         MessageLogger* logger;
     };
 
@@ -84,11 +83,13 @@ namespace battle::config {
 
         metatable["getTeam"] = [](EntityLogger& el) {
             // create a new logged entity for every member in the team
+            const auto team = el.system->getTeam(*el.entity);
+            const auto members = el.system->getEntities(team);
+
             std::vector<EntityLogger> v;
-            v.reserve(el.team->size());
-            for (Entity* e : *el.team) {
-                v.emplace_back(e, el.team, el.logger);
-            }
+            v.reserve(members.size());
+            for (Entity* e : members)
+                v.emplace_back(e, el.system, el.logger);
             return v;
         };
     }
@@ -301,10 +302,10 @@ namespace battle {
 
     void SkillDetails::perform(MessageLogger& logger,
             Entity& source, Entity& target,
-            const BattleView& view) const
+            BattleSystem& system) const
     {
-        config::EntityLogger src{ &source, &view.allies,  &logger };
-        config::EntityLogger tgt{ &target, &view.enemies, &logger };
+        config::EntityLogger src{ &source, &system, &logger };
+        config::EntityLogger tgt{ &target, &system, &logger };
 
         sol::protected_function perform = handle->data["perform"];
         auto ret = perform(handle->data, src, tgt);

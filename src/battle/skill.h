@@ -11,7 +11,7 @@ namespace battle {
 
 class Entity;
 class MessageLogger;
-struct BattleView;
+class BattleSystem;
 
 
 /// Encapsulates a skill
@@ -23,11 +23,11 @@ public:
     /// Determines if the skill can currently be used by the provided entity
     [[nodiscard]] bool isUsableBy(const Entity& source) const noexcept;
 
-    using Team = std::vector<Entity*>;
     /// Process the effects of `source' using this skill on `target';
     /// logs to logger, and includes the view of the battle
-    void use(MessageLogger& logger, Entity& source, Entity& target,
-             const BattleView& view) const;
+    void use(MessageLogger& logger,
+             Entity& source, Entity& target,
+             BattleSystem& system) const;
 
     const SkillDetails& getDetails() const noexcept {
         return details;
