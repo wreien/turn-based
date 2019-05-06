@@ -30,7 +30,7 @@ T getInput(F is_valid, std::string_view errmsg = "\033[1;33mInvalid input!\n> \0
     while (!(std::cin >> value) || !is_valid(value)) {
         // end quickly if EOF called
         if (std::cin.eof()) {
-            std::cout << bold_colour << "\nGoodbye!" << std::endl;
+            std::cout << bold_colour << "\n\nGoodbye!" << std::endl;
             std::exit(0);
         }
 
@@ -51,8 +51,20 @@ T getInput(std::string_view errmsg = "\033[1;33mInvalid input!\n> \033[0m") {
     return getInput<T>([](auto){ return true; }, errmsg);
 }
 
-battle::EntityID genEntityID(const std::string& kind, const std::string& type, int id) {
+battle::EntityID genEntityID(const std::string& kind, const std::string& type,
+                             int id, battle::Team team)
+{
     std::string name = kind + " " + type + " #" + std::to_string(id);
+
+    switch (team) {
+    case battle::Team::Blue:
+        name = blue_colour + name + reset_colour;
+        break;
+    case battle::Team::Red:
+        name = red_colour + name + reset_colour;
+        break;
+    }
+
     return battle::EntityID { kind, type, std::move(name) };
 }
 
@@ -76,7 +88,7 @@ auto init() {
     for (int i = 0; i < players; ++i) {
         auto [blue_stats, blue_skills] = battle::getEntityDetails(kind, blue_type, 1);
         auto e = std::make_shared<battle::Entity>(
-            genEntityID(kind, blue_type, i + 1),
+            genEntityID(kind, blue_type, i + 1, Team::Blue),
             1, blue_stats, std::move(blue_skills)
         );
         e->assignController<battle::PlayerController>();
@@ -87,7 +99,7 @@ auto init() {
     for (int i = 0; i < enemies; ++i) {
         auto [red_stats, red_skills] = battle::getEntityDetails(kind, red_type, 1);
         auto e = std::make_shared<battle::Entity>(
-            genEntityID(kind, red_type, i + 1),
+            genEntityID(kind, red_type, i + 1, Team::Red),
             1, red_stats, std::move(red_skills)
         );
         e->assignController<battle::NPCController>();
@@ -273,9 +285,9 @@ void handleUserChoice(battle::PlayerController& controller,
         std::exit(0);
     });
 
-    std::cout << bold_colour;
-    std::cout << "===\nWhat will " << controller.getEntity().getID().name << " do?\n";
-    std::cout << reset_colour;
+    std::cout << bold_colour << "===\nWhat will "
+              << controller.getEntity().getID().name << bold_colour
+              << " do?\n" << reset_colour;
 
     for (auto&& [id, msg, fn] : choice)
         std::cout << " - " << msg << "\n";
