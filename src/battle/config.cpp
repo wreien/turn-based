@@ -69,6 +69,8 @@ namespace battle::config {
         metatable["getLevel"]      = wrap_entity_fn(&Entity::getLevel);
         metatable["getExperience"] = wrap_entity_fn(&Entity::getExperience);
 
+        metatable["isDead"] = wrap_entity_fn(&Entity::isDead);
+
         metatable["drainHP"]   = wrap_entity_fn(&Entity::drain<Pool::HP>);
         metatable["drainMP"]   = wrap_entity_fn(&Entity::drain<Pool::MP>);
         metatable["drainTech"] = wrap_entity_fn(&Entity::drain<Pool::Tech>);
@@ -82,14 +84,24 @@ namespace battle::config {
         metatable["getTech"] = wrap_entity_fn(&Entity::get<Pool::Tech>);
 
         metatable["getTeam"] = [](EntityLogger& el) {
-            // create a new logged entity for every member in the team
-            const auto team = el.system->getTeam(*el.entity);
-            const auto members = el.system->getEntities(team);
+            // create a new logged entity for every living member in the team
+            const auto members = el.system->teamMembersOf(el);
 
             std::vector<EntityLogger> v;
-            v.reserve(members.size());
             for (Entity* e : members)
-                v.emplace_back(e, el.system, el.logger);
+                if (!e->isDead())
+                    v.emplace_back(e, el.system, el.logger);
+            return v;
+        };
+
+        metatable["getDeadTeamMates"] = [](EntityLogger& el) {
+            // create a new logged entity for every dead member in the team
+            const auto members = el.system->teamMembersOf(el);
+
+            std::vector<EntityLogger> v;
+            for (Entity* e : members)
+                if (e->isDead())
+                    v.emplace_back(e, el.system, el.logger);
             return v;
         };
     }

@@ -103,10 +103,10 @@ void drawEntity(const battle::Entity& entity) {
 void drawTeams(const battle::BattleSystem& system) {
     using battle::Team;
     std::cout << "\nBlue team:\n" << std::string(60, '=') << "\n";
-    for (auto entity : system.getEntities(Team::Blue))
+    for (auto entity : system.teamMembersOf(Team::Blue))
         drawEntity(*entity);
     std::cout << "\nRed team:\n" << std::string(60, '=') << "\n";
-    for (auto entity : system.getEntities(Team::Red))
+    for (auto entity : system.teamMembersOf(Team::Red))
         drawEntity(*entity);
     std::cout << "\n";
 }
@@ -136,7 +136,7 @@ void handleUserChoice(battle::PlayerController& controller,
         choice.emplace_back('s', "[S]kill", [&]() -> battle::Action {
             std::cout << "Choose skill (enter the number, 0 to defend):\n";
 
-            int i = 0;
+            unsigned i = 0;
             for (auto&& skill : options.skills) {
                 auto& details = skill->getDetails();
                 std::cout << "  " << ++i << ". " << details.getName();
@@ -186,7 +186,7 @@ void handleUserChoice(battle::PlayerController& controller,
             std::cout << "> ";
 
             auto skillchoice = getInput<unsigned>([&](auto x){
-                return 0 <= x && x <= options.skills.size();
+                return 0 <= x && x <= i;
             });
 
             if (skillchoice == 0)
@@ -197,28 +197,33 @@ void handleUserChoice(battle::PlayerController& controller,
             // TODO: handle Spread::Self
             std::cout << "Choose target:\n";
 
-            auto red_team = system.getEntities(battle::Team::Red);
-            auto blue_team = system.getEntities(battle::Team::Blue);
+            auto red_team = system.teamMembersOf(battle::Team::Red);
+            auto blue_team = system.teamMembersOf(battle::Team::Blue);
 
             i = 0;
             std::cout << "Red team:\n";
             for (auto&& target : red_team) {
-                std::cout << "  " << ++i << ". ";
-                drawEntity(*target);
+                if (!target->isDead()) {
+                    std::cout << "  " << ++i << ". ";
+                    drawEntity(*target);
+                }
             }
+            unsigned splitpoint = i;
             std::cout << "Blue Team:\n";
             for (auto&& target : blue_team) {
-                std::cout << "  " << ++i << ". ";
-                drawEntity(*target);
+                if (!target->isDead()) {
+                    std::cout << "  " << ++i << ". ";
+                    drawEntity(*target);
+                }
             }
             std::cout << "> ";
 
             auto targetchoice = getInput<unsigned>([&](auto x){
-                return 0 < x && x <= red_team.size() + blue_team.size();
+                return 1 <= x && x <= i;
             });
-            auto target = (targetchoice <= red_team.size()) ?
+            auto target = (targetchoice <= splitpoint) ?
                     red_team[targetchoice - 1]
-                  : blue_team[targetchoice - red_team.size() - 1];
+                  : blue_team[targetchoice - splitpoint - 1];
 
             return Skill{ skill, *target };
         });
@@ -317,6 +322,9 @@ void printMessage(const battle::Message& m) {
                 std::cout << ", and succeeded!\n";
             else
                 std::cout << "... but failed.";
+        },
+        [](const Died& d) {
+            std::cout << d.entity.getID().name << " died!\n";
         },
         [](const Notification& n) {
             std::cout << n.message << "\n";
