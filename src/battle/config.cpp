@@ -245,6 +245,7 @@ namespace battle {
                 6 + level,     // speed
                 { 0 },         // resist
             };
+            skills.emplace_back("attack");
 
             return std::make_tuple(stats, std::move(skills));
         }

@@ -71,7 +71,9 @@ if(MSVC)
 else()  # most likely Clang or GCC
     target_compile_options(${PROJECT_NAME} PRIVATE
         -Wall -Wextra -pedantic
-        -Wnon-virtual-dtor)  # TODO: add more warnings
+        -Wnon-virtual-dtor -Wassign-enum
+        -Wsign-conversion -Wfloat-conversion
+        -Wfor-loop-analysis)  # TODO: add more warnings
 
     # TODO: replace with generator expressions?
     if (CMAKE_BUILD_TYPE STREQUAL "Debug")

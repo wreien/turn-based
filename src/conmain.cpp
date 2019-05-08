@@ -229,7 +229,10 @@ void handleUserChoice(battle::PlayerController& controller,
         });
     choice.emplace_back('i', "[I]nfo", [&controller](){
         using P = battle::Pool;
-        auto printStat = [](auto stat){ return std::string(stat, '*'); };
+        const auto printStat = [](auto stat) {
+            return std::string(static_cast<unsigned>(stat), '*');
+        };
+
         auto& e = controller.getEntity();
         battle::Stats s = e.getStats();
         std::cout << "Stats for " << e.getID().name << ":\n";

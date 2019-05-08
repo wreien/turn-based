@@ -4,6 +4,7 @@
 #include <random>
 #include <type_traits>
 #include <initializer_list>
+#include <stdexcept>
 
 namespace _detail::random {
     auto& generator() {
@@ -42,11 +43,14 @@ std::enable_if_t<std::is_arithmetic_v<T>, T> random(T max) {
 }
 
 namespace _detail::random {
-    template <typename T>
-    auto& fromContainer(T&& container) {
+    template <typename C>
+    auto& fromContainer(C&& container) {
         auto s = std::size(container);
-        auto v = ::random(s - 1);
-        if constexpr (std::is_const_v<T>)
+        if (s == 0)
+            throw std::invalid_argument("random: empty container");
+        using T = std::remove_reference_t<C>;
+        auto v = static_cast<typename T::difference_type>(::random(s - 1));
+        if constexpr (std::is_const_v<C>)
             return *std::next(std::cbegin(container), v);
         else
             return *std::next(std::begin(container), v);
