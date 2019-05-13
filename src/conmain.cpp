@@ -1,11 +1,15 @@
+#include <algorithm>
 #include <cstdlib>
+#include <fstream>
 #include <functional>
 #include <iostream>
+#include <iterator>
 #include <locale>
 #include <memory>
 #include <numeric>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 
 #include "battle/battlesystem.h"
 #include "battle/entity.h"
@@ -43,49 +47,133 @@ T getInput(std::string_view errormsg = "Invalid input!\n> ") {
     return getInput<T>([](auto){ return true; }, errormsg);
 }
 
+std::shared_ptr<battle::Entity> loadEntity(battle::EntityID id) {
+    using namespace battle;
+    std::string path = "./data/entity/" + id.kind + "." + id.type + ".entity";
+    std::ifstream in { path };
+    if (!in) throw std::invalid_argument("couldn't open '" + path + "'.");
+
+    Stats stats;
+    std::vector<Skill> skills;
+
+    std::string line;
+    while (std::getline(in, line)) {
+        if (line.empty())
+            continue;
+
+        std::istringstream iss{ line };
+        std::string stat;
+        iss >> stat;
+
+        if (stat.empty() || stat[0] == '#') continue; // ignore comments
+        else if (stat == "max_hp") iss >> stats.max_hp;
+        else if (stat == "max_mp") iss >> stats.max_mp;
+        else if (stat == "max_tech") iss >> stats.max_tech;
+        else if (stat == "p_atk") iss >> stats.p_atk;
+        else if (stat == "p_def") iss >> stats.p_def;
+        else if (stat == "m_atk") iss >> stats.m_atk;
+        else if (stat == "m_def") iss >> stats.m_def;
+        else if (stat == "skill") iss >> stats.skill;
+        else if (stat == "evade") iss >> stats.evade;
+        else if (stat == "speed") iss >> stats.speed;
+        else if (stat == "ability") {
+            std::string skill_name;
+            std::getline(iss >> std::ws, skill_name);
+            skills.emplace_back(skill_name);
+        } else
+            throw std::invalid_argument(id.name + ": unknown key '" + stat + "'.");
+    }
+
+    auto test_stat = [](auto stat, std::string name) {
+        if (stat <= 0)
+            throw std::invalid_argument("bad value for '" + name + "'.");
+    };
+    test_stat(stats.max_hp, "max_hp");
+    test_stat(stats.max_mp, "max_mp");
+    test_stat(stats.max_tech, "max_tech");
+    test_stat(stats.p_atk, "p_atk");
+    test_stat(stats.p_def, "p_def");
+    test_stat(stats.m_atk, "m_atk");
+    test_stat(stats.m_def, "m_def");
+    test_stat(stats.skill, "skill");
+    test_stat(stats.evade, "evade");
+    test_stat(stats.speed, "speed");
+
+    return std::make_shared<Entity>(id, 1, stats, std::move(skills));
+}
+
 battle::EntityID genEntityID(const std::string& kind, const std::string& type, int id) {
     std::string name = kind + " " + type + " #" + std::to_string(id);
     return battle::EntityID { kind, type, std::move(name) };
 }
 
-auto init() {
+auto generateTeams() {
     using battle::Team;
 
-    std::cout << "Welcome to the wonderful battle simulator!\n\n";
+    std::unordered_map<std::string, int> seen_ids;
 
-    int players = 0, enemies = 0;
+    auto gen_id = [](std::string&& kind, std::string&& type, int count, bool do_1) {
+        auto name = kind + " " + type;
+        if (do_1 || count > 1)
+            name += " #" + std::to_string(count);
+        return battle::EntityID { std::move(kind), std::move(type), std::move(name) };
+    };
+
+    std::vector<battle::EntityID> blue_ids;
     std::cout << "How many players?\n> ";
-    players = getInput<int>();
+    int players = getInput<int>();
+
+    for (int i = 0; i < players; i++) {
+        std::string kind;
+        std::string type;
+        std::cout << "Player #" << i + 1 << ": ";
+        std::cin >> kind >> type;
+
+        int count = ++seen_ids[kind + "\0" + type];
+        blue_ids.push_back(gen_id(std::move(kind), std::move(type), count, false));
+    }
+
+    std::vector<battle::EntityID> red_ids;
     std::cout << "How many enemies?\n> ";
-    enemies = getInput<int>();
+    int enemies = getInput<int>();
 
-    std::string kind = "default";
-    std::string blue_type = "good";
-    std::string red_type = "evil";
+    for (int i = 0; i < enemies; i++) {
+        std::string kind;
+        std::string type;
+        std::cout << "Enemy #" << i + 1 << ": ";
+        std::cin >> kind >> type;
 
-    std::vector<std::shared_ptr<battle::Entity>> blue;
-    for (int i = 0; i < players; ++i) {
-        auto [blue_stats, blue_skills] = battle::getEntityDetails(kind, blue_type, 1);
-        auto e = std::make_shared<battle::Entity>(
-            genEntityID(kind, blue_type, i + 1),
-            1, blue_stats, std::move(blue_skills)
-        );
-        e->assignController<battle::PlayerController>();
-        blue.push_back(std::move(e));
+        int count = ++seen_ids[kind + "\0" + type];
+        red_ids.push_back(gen_id(std::move(kind), std::move(type), count, false));
     }
 
-    std::vector<std::shared_ptr<battle::Entity>> red;
-    for (int i = 0; i < enemies; ++i) {
-        auto [red_stats, red_skills] = battle::getEntityDetails(kind, red_type, 1);
-        auto e = std::make_shared<battle::Entity>(
-            genEntityID(kind, red_type, i + 1),
-            1, red_stats, std::move(red_skills)
-        );
-        e->assignController<battle::NPCController>();
-        red.push_back(std::move(e));
-    }
+    // converts an EntityID to an Entity; NOTE destroys `id' (assume xvalue)
+    auto to_entity = [&seen_ids,gen_id](battle::EntityID& id) {
+        // catch those ids we missed adding numbers to in the first insertion
+        auto test_str = id.kind + "\0" + id.type;
+        if (seen_ids[test_str] > 1) {
+            id = gen_id(std::move(id.kind), std::move(id.type), 1, true);
+            seen_ids[test_str] = 0; // but we only want to change the first one
+        }
+        return loadEntity(std::move(id));
+    };
 
-    return std::make_tuple(std::move(blue), std::move(red));
+    // Could reserve, but really don't need to
+    std::vector<std::shared_ptr<battle::Entity>> blue_entities;
+    std::vector<std::shared_ptr<battle::Entity>> red_entities;
+
+    // TODO: C++20 ranges to get an idiomatic destructive transform (I hope)
+    std::transform(std::begin(blue_ids), std::end(blue_ids),
+                   std::back_inserter(blue_entities), to_entity);
+    std::transform(std::begin(red_ids), std::end(red_ids),
+                   std::back_inserter(red_entities), to_entity);
+
+    // set controllers for players
+    std::for_each(std::begin(blue_entities), std::end(blue_entities), [](auto& entity) {
+        entity->template assignController<battle::PlayerController>();
+    });
+
+    return std::make_pair(blue_entities, red_entities);
 }
 
 void drawEntity(const battle::Entity& entity) {
@@ -336,8 +424,9 @@ void printMessage(const battle::Message& m) {
 }
 
 int main() {
-    auto [blue, red] = init();
-    battle::BattleSystem system(blue, red);
+    std::cout << "Welcome to the wonderful battle simulator!\n\n";
+
+    auto system = std::make_from_tuple<battle::BattleSystem>(generateTeams());
     drawTeams(system);
 
     while (!system.isDone()) {
