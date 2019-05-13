@@ -102,11 +102,6 @@ std::shared_ptr<battle::Entity> loadEntity(battle::EntityID id) {
     return std::make_shared<Entity>(id, 1, stats, std::move(skills));
 }
 
-battle::EntityID genEntityID(const std::string& kind, const std::string& type, int id) {
-    std::string name = kind + " " + type + " #" + std::to_string(id);
-    return battle::EntityID { kind, type, std::move(name) };
-}
-
 auto generateTeams() {
     using battle::Team;
 
@@ -119,16 +114,37 @@ auto generateTeams() {
         return battle::EntityID { std::move(kind), std::move(type), std::move(name) };
     };
 
+    // can't just use getInput here: should really fix that
+    auto get_kind_type = [] {
+        std::string kind;
+        std::string type;
+        while (true) {
+            std::string line;
+            std::cin >> std::ws;
+            if (std::cin.eof()) {
+                std::cout << "\nGoodbye!" << std::endl;
+                std::exit(0);
+            }
+            std::getline(std::cin, line);
+            std::istringstream iss { line };
+            iss >> kind >> type;
+            std::string path = "./data/entity/" + kind + "." + type + ".entity";
+            std::ifstream in { path };
+            if (!in) {
+                std::cout << "Unknown entity [" << kind << ", " << type << "]. "
+                          << "Try again: ";
+            } else
+                return std::make_pair(kind, type);
+        }
+    };
+
     std::vector<battle::EntityID> blue_ids;
     std::cout << "How many players?\n> ";
     int players = getInput<int>();
 
     for (int i = 0; i < players; i++) {
-        std::string kind;
-        std::string type;
         std::cout << "Player #" << i + 1 << ": ";
-        std::cin >> kind >> type;
-
+        auto [kind, type] = get_kind_type();
         int count = ++seen_ids[kind + "\0" + type];
         blue_ids.push_back(gen_id(std::move(kind), std::move(type), count, false));
     }
@@ -138,24 +154,29 @@ auto generateTeams() {
     int enemies = getInput<int>();
 
     for (int i = 0; i < enemies; i++) {
-        std::string kind;
-        std::string type;
         std::cout << "Enemy #" << i + 1 << ": ";
-        std::cin >> kind >> type;
-
+        auto [kind, type] = get_kind_type();
         int count = ++seen_ids[kind + "\0" + type];
         red_ids.push_back(gen_id(std::move(kind), std::move(type), count, false));
     }
 
     // converts an EntityID to an Entity; NOTE destroys `id' (assume xvalue)
-    auto to_entity = [&seen_ids,gen_id](battle::EntityID& id) {
-        // catch those ids we missed adding numbers to in the first insertion
-        auto test_str = id.kind + "\0" + id.type;
-        if (seen_ids[test_str] > 1) {
-            id = gen_id(std::move(id.kind), std::move(id.type), 1, true);
-            seen_ids[test_str] = 0; // but we only want to change the first one
-        }
-        return loadEntity(std::move(id));
+    auto to_entity = [&seen_ids,gen_id](Team team) {
+        return [&seen_ids,gen_id,team](battle::EntityID& id) {
+            // catch those ids we missed adding numbers to in the first insertion
+            auto test_str = id.kind + "\0" + id.type;
+            if (seen_ids[test_str] > 1) {
+                id = gen_id(std::move(id.kind), std::move(id.type), 1, true);
+                seen_ids[test_str] = 0; // but we only want to change the first one
+            }
+
+            // set controllers (if applicable)
+            auto e = loadEntity(std::move(id));
+            if (team == Team::Blue)
+                e->assignController<battle::PlayerController>();
+
+            return e;
+        };
     };
 
     // Could reserve, but really don't need to
@@ -164,14 +185,9 @@ auto generateTeams() {
 
     // TODO: C++20 ranges to get an idiomatic destructive transform (I hope)
     std::transform(std::begin(blue_ids), std::end(blue_ids),
-                   std::back_inserter(blue_entities), to_entity);
+                   std::back_inserter(blue_entities), to_entity(Team::Blue));
     std::transform(std::begin(red_ids), std::end(red_ids),
-                   std::back_inserter(red_entities), to_entity);
-
-    // set controllers for players
-    std::for_each(std::begin(blue_entities), std::end(blue_entities), [](auto& entity) {
-        entity->template assignController<battle::PlayerController>();
-    });
+                   std::back_inserter(red_entities), to_entity(Team::Red));
 
     return std::make_pair(blue_entities, red_entities);
 }
@@ -352,7 +368,6 @@ void handleUserChoice(battle::PlayerController& controller,
     choice.emplace_back('q', "[Q]uit", []() -> battle::Action {
         std::cout << "Goodbye!\n";
         std::exit(0);
-        return {};
     });
 
     std::cout << "===\nWhat will " << controller.getEntity().getID().name << " do?\n";
