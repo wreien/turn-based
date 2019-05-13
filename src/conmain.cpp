@@ -122,16 +122,38 @@ auto generateTeams() {
         return battle::EntityID { std::move(kind), std::move(type), std::move(name) };
     };
 
+    // can't just use getInput here: should really fix that
+    auto get_kind_type = [] {
+        std::string kind;
+        std::string type;
+        while (true) {
+            std::string line;
+            std::cin >> std::ws;
+            if (std::cin.eof()) {
+                std::cout << bold_colour << "\nGoodbye!" << reset_colour << std::endl;
+                std::exit(0);
+            }
+            std::getline(std::cin, line);
+            std::istringstream iss { line };
+            iss >> kind >> type;
+            std::string path = "./data/entity/" + kind + "." + type + ".entity";
+            std::ifstream in { path };
+            if (!in) {
+                std::cout << "Unknown entity [" << yellow_colour << kind 
+                          << reset_colour << ", " << yellow_colour << type 
+                          << reset_colour << "]. Try again: ";
+            } else
+                return std::make_pair(kind, type);
+        }
+    };
+
     std::vector<battle::EntityID> blue_ids;
     std::cout << bold_colour << "How many players?\n> " << reset_colour;
     int players = getInput<int>();
 
     for (int i = 0; i < players; i++) {
-        std::string kind;
-        std::string type;
         std::cout << blue_colour << "Player #" << i + 1 << reset_colour << ": ";
-        std::cin >> kind >> type;
-
+        auto [kind, type] = get_kind_type();
         int count = ++seen_ids[kind + "\0" + type];
         blue_ids.push_back(gen_id(std::move(kind), std::move(type), count, false));
     }
@@ -141,11 +163,8 @@ auto generateTeams() {
     int enemies = getInput<int>();
 
     for (int i = 0; i < enemies; i++) {
-        std::string kind;
-        std::string type;
         std::cout << red_colour << "Enemy #" << i + 1 << reset_colour << ": ";
-        std::cin >> kind >> type;
-
+        auto [kind, type] = get_kind_type();
         int count = ++seen_ids[kind + "\0" + type];
         red_ids.push_back(gen_id(std::move(kind), std::move(type), count, false));
     }
