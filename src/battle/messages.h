@@ -39,15 +39,21 @@ namespace message {
         bool applied;         ///< whether the effect was applied or removed
     };
 
-    /// An enemy defended
+    /// An entity defended
     struct Defended {
         const Entity& entity;
     };
 
-    /// An enemy bravely ran away
+    /// An entity bravely ran away
     struct Fled {
         const Entity& entity; ///< the entity leading the charge
         bool succeeded;       ///< whether they succeeded or not
+    };
+
+    /// An entity has fallen gloriously
+    struct Died {
+        const Entity& entity; ///< the entity of renown
+        // TODO gained xp, money, phat l00t, etc.
     };
 
     // etc. for other things (e.g. status effects, weather)
@@ -64,6 +70,7 @@ using Message = std::variant< message::SkillUsed
                             , message::StatusEffect
                             , message::Defended
                             , message::Fled
+                            , message::Died
                             , message::Notification
                             >;
 

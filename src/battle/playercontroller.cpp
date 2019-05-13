@@ -18,15 +18,10 @@ Action PlayerController::go(const BattleView&) {
 }
 
 UserOptions PlayerController::options() const {
-    auto skills = entity.getSkills();
-    skills.erase(std::remove_if(
-        std::begin(skills), std::end(skills),
-        [&](auto&& s){ return !s->isUsableBy(entity); }
-    ), std::end(skills));
     return {
         true,
         true,
-        skills
+        entity.getSkills()
     };
 }
 

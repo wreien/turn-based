@@ -120,6 +120,8 @@ public:
         p -= std::max(amt, 0);
         if (p < 0) p = 0;
         logger.appendMessage(message::PoolChanged{ *this, pool, old, p });
+        if constexpr (pool == Pool::HP)
+            if (p == 0) logger.appendMessage(message::Died{ *this });
     }
 
     /// Restore one of the entity's pools

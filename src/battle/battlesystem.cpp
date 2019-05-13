@@ -31,7 +31,7 @@ BattleSystem::BattleSystem(const std::vector<EntityRef>& blues,
 }
 
 
-std::vector<Entity*> BattleSystem::getEntities(Team team) {
+std::vector<Entity*> BattleSystem::teamMembersOf(Team team) noexcept {
     std::vector<Entity*> entities;
     for (auto&& c : combatants)
         if (c.team == team)
@@ -39,7 +39,7 @@ std::vector<Entity*> BattleSystem::getEntities(Team team) {
     return entities;
 }
 
-std::vector<const Entity*> BattleSystem::getEntities(Team team) const {
+std::vector<const Entity*> BattleSystem::teamMembersOf(Team team) const noexcept {
     std::vector<const Entity*> entities;
     for (auto&& c : combatants)
         if (c.team == team)
@@ -47,13 +47,13 @@ std::vector<const Entity*> BattleSystem::getEntities(Team team) const {
     return entities;
 }
 
-Team BattleSystem::getTeam(const Entity& e) const {
+Team BattleSystem::teamOf(const Entity& e) const {
     auto it = std::find_if(
         std::begin(combatants), std::end(combatants),
         [&e](auto&& c){ return c.entity.get() == &e; }
     );
     if (it == std::end(combatants))
-        throw std::invalid_argument("BattleSystem::getTeam: entity not found");
+        throw std::invalid_argument("BattleSystem::teamOf: entity not found");
     return it->team;
 }
 
@@ -89,53 +89,55 @@ void BattleSystem::gotoNextTurn() {
 // Actually run the game
 
 TurnInfo BattleSystem::doTurn() {
-    MessageLogger logger;
-    TurnInfo info { false, nullptr, {} };
-
+    // skip dead people
     auto& c = combatants[*current_turn];
-    auto& controller = c.entity->getController();
+    TurnInfo info { true, false, nullptr, {} };
+    if (c.entity->isDead()) {
+        gotoNextTurn();
+        return info;
+    }
 
     BattleView view {
-        getEntities(c.team == Team::Blue ? Team::Blue : Team::Red),
-        getEntities(c.team == Team::Blue ? Team::Red : Team::Blue)
+        teamMembersOf(c.team == Team::Blue ? Team::Blue : Team::Red),
+        teamMembersOf(c.team == Team::Blue ? Team::Red : Team::Blue)
     };
 
+    auto& controller = c.entity->getController();
     Action act = controller.go(view);
 
-    bool turnFinished = false;
+    MessageLogger logger;
     std::visit(overload{
         [&](action::Defend){
             // at this stage, do nothing ;)
             logger.appendMessage(message::Defended{ *c.entity });
-            turnFinished = true;
+            info.turn_finished = true;
         },
         [&](action::Flee){
             // at this stage, do nothing ;)
             logger.appendMessage(message::Fled{ *c.entity, true });
-            turnFinished = true;
+            info.turn_finished = true;
         },
         [&](action::Skill& s){
-            // TODO: get the results
             auto it = std::find_if(
                 std::begin(combatants), std::end(combatants),
                 [&s](auto&& c){ return c.entity.get() == &s.target; }
             );
             if (it != std::end(combatants)) {
                 s.skill->use(logger, *c.entity, *it->entity, *this);
-                turnFinished = true;
+                info.turn_finished = true;
             } else {
                 throw std::invalid_argument(
                         "BattleSystem::doTurn/Skill: entity not found");
             }
         },
         [&](action::UserChoice user) {
+            info.turn_finished = false;
             info.need_user_input = true;
             info.controller = &user.controller;
-            turnFinished = false;
         }
     }, act);
 
-    if (turnFinished) {
+    if (info.turn_finished) {
         if (!c.entity->isDead())
             c.entity->processTurnEnd(logger);
         gotoNextTurn();
@@ -146,8 +148,13 @@ TurnInfo BattleSystem::doTurn() {
 }
 
 bool BattleSystem::isDone() const {
-    // TODO
-    return false;
+    const auto is_dead = [](const Entity* e){ return e->isDead(); };
+
+    const auto red  = teamMembersOf(Team::Red);
+    const auto blue = teamMembersOf(Team::Blue);
+
+    return std::all_of(std::begin(red), std::end(red), is_dead)
+        || std::all_of(std::begin(blue), std::end(blue), is_dead);
 }
 
 }

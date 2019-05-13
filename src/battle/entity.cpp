@@ -47,7 +47,11 @@ void Entity::restoreController(std::unique_ptr<Controller>&& ctrl) noexcept {
 
 std::vector<SkillRef> Entity::getSkills() const {
     // TODO: apply equipment bonuses, status effects, etc.
-    return { std::begin(skills), std::end(skills) };
+    std::vector<SkillRef> refs;
+    std::copy_if(std::begin(skills), std::end(skills),
+                 std::back_inserter(refs),
+                 [this](const Skill& s) { return s.isUsableBy(*this); });
+    return refs;
 }
 
 Stats Entity::getStats() const noexcept {

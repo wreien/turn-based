@@ -7,7 +7,8 @@ namespace battle {
 
 class Entity;
 
-// Generic AI controller for entities
+/// Generic AI controller for entities
+/// Only has a very simple AI at the moment
 class NPCController : public Controller {
 public:
     static constexpr bool nest_controller = false;
@@ -16,7 +17,7 @@ public:
     [[nodiscard]] virtual Action go(const BattleView& view) override;
 
 private:
-    Entity& entity;
+    Entity& entity; ///< the owning entity
 };
 
 }
