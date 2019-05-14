@@ -70,10 +70,14 @@ if(MSVC)
     target_compile_options(${PROJECT_NAME} PRIVATE /Zi)
 else()  # most likely Clang or GCC
     target_compile_options(${PROJECT_NAME} PRIVATE
-        -Wall -Wextra -pedantic
-        -Wnon-virtual-dtor -Wassign-enum
-        -Wsign-conversion -Wfloat-conversion
-        -Wfor-loop-analysis)  # TODO: add more warnings
+        -Wall -Wextra -pedantic -Wnon-virtual-dtor
+        -Wsign-conversion -Wfloat-conversion)  # TODO: add more warnings
+
+    if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        # these aren't GCC-supported warnings
+        target_compile_options(${PROJECT_NAME} PRIVATE
+            -Wassign-enum -Wfor-loop-analysis)
+    endif()
 
     # TODO: replace with generator expressions?
     if (CMAKE_BUILD_TYPE STREQUAL "Debug")

@@ -94,9 +94,14 @@ namespace battle::config {
 
         metatable["isDead"] = wrap_entity_fn(&Entity::isDead);
 
-        metatable["getHP"]   = wrap_entity_fn(&Entity::get<Pool::HP>);
-        metatable["getMP"]   = wrap_entity_fn(&Entity::get<Pool::MP>);
-        metatable["getTech"] = wrap_entity_fn(&Entity::get<Pool::Tech>);
+        // need to do this because GCC has a bug;
+        // see https://gcc.gnu.org/bugzilla/show_bug.cgi?id=64194
+        auto getHP = &Entity::get<Pool::HP>;
+        auto getMP = &Entity::get<Pool::MP>;
+        auto getTech = &Entity::get<Pool::Tech>;
+        metatable["getHP"]   = wrap_entity_fn(getHP);
+        metatable["getMP"]   = wrap_entity_fn(getMP);
+        metatable["getTech"] = wrap_entity_fn(getTech);
 
         metatable["getTeam"] = [](EntityLogger& el) {
             // create a new logged entity for every living member in the team
