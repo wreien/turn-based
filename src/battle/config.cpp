@@ -4,8 +4,10 @@
 #include "entity.h"
 #include "stats.h"
 #include "battlesystem.h"
+#include "../random.h"
 
 #include <type_traits>
+#include <cmath>
 
 #define SOL_CHECK_ARGUMENTS 1
 #include <sol/sol.hpp>
@@ -55,12 +57,33 @@ namespace battle::config {
         };
     }
 
+
+    // wrap_entity_fn but only for `drain' and `restore' functions
+    auto wrap_drain_restore(void (Entity::* ptr)(MessageLogger& logger, int amt)) {
+        return sol::overload(
+            [ptr](EntityLogger& self, int amt) {
+                (self.entity->*ptr)(*self.logger, amt);
+            },
+            [ptr](EntityLogger& self, double amt) {
+                (self.entity->*ptr)(*self.logger, std::lround(amt));
+            }
+        );
+    }
+
+
     void loadEntityLoggerMetatable(sol::state_view& lua) {
         auto metatable = lua.new_usertype<EntityLogger>("logged_entity",
             "new", sol::no_constructor);
 
-        metatable["stats"] = sol::readonly_property(
-                wrap_entity_fn(&Entity::getStats));
+        metatable["stats"] = sol::readonly_property(wrap_entity_fn(&Entity::getStats));
+
+        metatable["drainHP"]   = wrap_drain_restore(&Entity::drain<Pool::HP>);
+        metatable["drainMP"]   = wrap_drain_restore(&Entity::drain<Pool::MP>);
+        metatable["drainTech"] = wrap_drain_restore(&Entity::drain<Pool::Tech>);
+
+        metatable["restoreHP"]   = wrap_drain_restore(&Entity::restore<Pool::HP>);
+        metatable["restoreMP"]   = wrap_drain_restore(&Entity::restore<Pool::MP>);
+        metatable["restoreTech"] = wrap_drain_restore(&Entity::restore<Pool::Tech>);
 
         metatable["getKind"] = [](EntityLogger& el){ return el.entity->getID().kind; };
         metatable["getType"] = [](EntityLogger& el){ return el.entity->getID().type; };
@@ -70,14 +93,6 @@ namespace battle::config {
         metatable["getExperience"] = wrap_entity_fn(&Entity::getExperience);
 
         metatable["isDead"] = wrap_entity_fn(&Entity::isDead);
-
-        metatable["drainHP"]   = wrap_entity_fn(&Entity::drain<Pool::HP>);
-        metatable["drainMP"]   = wrap_entity_fn(&Entity::drain<Pool::MP>);
-        metatable["drainTech"] = wrap_entity_fn(&Entity::drain<Pool::Tech>);
-
-        metatable["restoreHP"]   = wrap_entity_fn(&Entity::restore<Pool::HP>);
-        metatable["restoreMP"]   = wrap_entity_fn(&Entity::restore<Pool::MP>);
-        metatable["restoreTech"] = wrap_entity_fn(&Entity::restore<Pool::Tech>);
 
         metatable["getHP"]   = wrap_entity_fn(&Entity::get<Pool::HP>);
         metatable["getMP"]   = wrap_entity_fn(&Entity::get<Pool::MP>);
@@ -181,13 +196,20 @@ namespace battle::config {
             lua.open_libraries(
                 sol::lib::base,    // required
                 sol::lib::table,   // inserting into numbered lists
-                sol::lib::math,    // random numbers and other math fns
+                sol::lib::math,    // math fns
                 sol::lib::package  // require (TODO: do we want this?)
             );
 
             // prevent accidentally loading weird libraries and make sure we
             // actually get the libraries we *do* want
             lua.script("package.path = './data/?.lua'");
+
+            lua.set_function("random", sol::overload(
+                []() { return ::random(0.0, 1.0); },
+                [](long max) { return ::random(1, max); },
+                [](long min, long max) { return ::random(min, max); }
+            ));
+            lua["math"]["random"] = lua["random"];
 
             // load types and metatables
             loadSkillEnums(lua);

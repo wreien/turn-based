@@ -206,8 +206,8 @@ skill.list["Eruption"] = function(level, perks)
                 end
 
                 -- actually deal damage
-                -- currently this needs to be a whole number, so we floor it
-                entity:drainHP(math.floor(mod * base))
+                -- this is automatically rounded to the nearest whole number
+                entity:drainHP(mod * base)
             end
         end
     }
