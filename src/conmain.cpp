@@ -174,6 +174,8 @@ auto generateTeams() {
             auto e = loadEntity(std::move(id));
             if (team == Team::Blue)
                 e->assignController<battle::PlayerController>();
+            else
+                e->assignController<battle::NPCController>();
 
             return e;
         };
