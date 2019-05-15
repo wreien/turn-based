@@ -7,7 +7,7 @@ function skill.list.attack(level)
         power = 5,
         method = method.physical,
 
-        perform = function(self, source, target)
+        perform = function(self, source, target, log)
             -- does damage equal to "skill_level * user_level"
             for index, entity in ipairs(target:getTeam()) do
                 entity:drainHP(math.random(1,10) + level * source:getLevel())

@@ -181,6 +181,20 @@ namespace battle::config {
         });
     }
 
+    void loadMessageTypes(sol::state_view& lua) {
+        // TODO: redesign how this is done - maybe put this in "skill"?
+        auto msg = lua["message"].get_or_create<sol::table>();
+        msg["miss"] = [](const EntityLogger& el) -> Message {
+            return message::Miss{ *el.entity };
+        };
+        msg["critical"] = [](const EntityLogger& el) -> Message {
+            return message::Critical{ *el.entity };
+        };
+        msg["notify"] = [](std::string s) -> Message {
+            return message::Notification{ std::move(s) };
+        };
+    }
+
     void loadLuaPackages(sol::state_view& lua) {
         // now that we've set up all the usertypes, we're safe to load the
         // current list of possible skills
@@ -221,6 +235,7 @@ namespace battle::config {
             loadElements(lua);
             loadEntityLoggerMetatable(lua);
             loadStatsMetatable(lua);
+            loadMessageTypes(lua);
 
             // actually load the config files
             loadLuaPackages(lua);
@@ -348,7 +363,8 @@ namespace battle {
         config::EntityLogger tgt{ &target, &system, &logger };
 
         sol::protected_function perform = handle->data["perform"];
-        auto ret = perform(handle->data, src, tgt);
+        auto log = [&logger](const Message& m) { logger.appendMessage(m); };
+        auto ret = perform(handle->data, src, tgt, log);
         if (!ret.valid()) {
             sol::error err = ret;
             // TODO: dedicated error type for failures here

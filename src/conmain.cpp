@@ -395,11 +395,16 @@ void printMessage(const battle::Message& m) {
                       << su.skill->getDetails().getName() << " on "
                       << su.target.getID().name << "!\n";
         },
+        [](const Miss& m) {
+            std::cout << m.entity.getID().name << " avoided the attack!\n";
+        },
+        [](const Critical& c) {
+            std::cout << c.entity.getID().name << " took a critical hit!\n";
+        },
         [](const PoolChanged& pc) {
             const auto name = pc.entity.getID().name;
             const auto diff = pc.new_value - pc.old_value;
-            std::string poolname = (pc.pool == battle::Pool::HP)
-                ? "HP" : ((pc.pool == battle::Pool::MP) ? "MP" : "Tech");
+            std::string poolname = to_string(pc.pool);
             if (diff < 0) {
                 std::cout << name << " lost "
                           << -diff << " " << poolname << "!\n";

@@ -23,7 +23,7 @@ struct TurnInfo {
     bool turn_finished; ///< whether the current entity's turn finished
     bool need_user_input; ///< whether we now need user input
     PlayerController* controller; ///< the user's controller (if needing user input)
-    std::vector<Message> messages; ///< what happened since the last turn
+    MessageLogger messages; ///< what happened since the last turn
 };
 
 /// Manages and runs the battle; the game loop, if you will.
