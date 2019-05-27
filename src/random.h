@@ -7,7 +7,7 @@
 #include <stdexcept>
 
 namespace _detail::random {
-    auto& generator() {
+    inline auto& generator() {
         static auto gen = [](){
             std::random_device dev;
             return std::mt19937{ dev() };

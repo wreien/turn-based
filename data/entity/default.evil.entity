@@ -1,0 +1,28 @@
+####################################
+###### default evil entities #######
+####################################
+
+
+### stats ###
+#############
+
+max_hp 20
+max_mp 6
+max_tech 4
+
+p_atk 5
+p_def 2
+
+m_atk 1
+m_def 3
+
+skill 3
+evade 4
+
+speed 6
+
+
+### skills ###
+##############
+
+ability attack

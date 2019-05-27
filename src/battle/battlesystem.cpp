@@ -105,32 +105,31 @@ TurnInfo BattleSystem::doTurn() {
     auto& controller = c.entity->getController();
     Action act = controller.go(view);
 
-    MessageLogger logger;
     std::visit(overload{
-        [&](action::Defend){
+        [&info,c](action::Defend){
             // at this stage, do nothing ;)
-            logger.appendMessage(message::Defended{ *c.entity });
+            info.messages.appendMessage(message::Defended{ *c.entity });
             info.turn_finished = true;
         },
-        [&](action::Flee){
+        [&info,c](action::Flee){
             // at this stage, do nothing ;)
-            logger.appendMessage(message::Fled{ *c.entity, true });
+            info.messages.appendMessage(message::Fled{ *c.entity, true });
             info.turn_finished = true;
         },
-        [&](action::Skill& s){
+        [&info,c,this](action::Skill& s){
             auto it = std::find_if(
                 std::begin(combatants), std::end(combatants),
                 [&s](auto&& c){ return c.entity.get() == &s.target; }
             );
             if (it != std::end(combatants)) {
-                s.skill->use(logger, *c.entity, *it->entity, *this);
+                s.skill->use(info.messages, *c.entity, *it->entity, *this);
                 info.turn_finished = true;
             } else {
                 throw std::invalid_argument(
                         "BattleSystem::doTurn/Skill: entity not found");
             }
         },
-        [&](action::UserChoice user) {
+        [&info](action::UserChoice user) {
             info.turn_finished = false;
             info.need_user_input = true;
             info.controller = &user.controller;
@@ -139,11 +138,10 @@ TurnInfo BattleSystem::doTurn() {
 
     if (info.turn_finished) {
         if (!c.entity->isDead())
-            c.entity->processTurnEnd(logger);
+            c.entity->processTurnEnd(info.messages);
         gotoNextTurn();
     }
 
-    info.messages = logger.pop();
     return info;
 }
 

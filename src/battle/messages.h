@@ -1,9 +1,10 @@
 #ifndef BATTLE_MESSAGES_H_INCLUDED
 #define BATTLE_MESSAGES_H_INCLUDED
 
-#include <vector>
-#include <variant>
+#include <optional>
 #include <string>
+#include <variant>
+#include <vector>
 #include "skillref.h"
 #include "stats.h"
 
@@ -21,6 +22,16 @@ namespace message {
         SkillRef skill;       ///< the skill that was used
         const Entity& source; ///< who used the skill
         const Entity& target; ///< the primary target of the skill
+    };
+
+    /// A skill missed the target
+    struct Miss {
+        const Entity& entity; ///< who did the skill miss
+    };
+
+    /// A skill scored a critical hit
+    struct Critical {
+        const Entity& entity; ///< who received the crit
     };
 
     /// One of an entity's visible pools was changed
@@ -66,6 +77,8 @@ namespace message {
 }
 
 using Message = std::variant< message::SkillUsed
+                            , message::Miss
+                            , message::Critical
                             , message::PoolChanged
                             , message::StatusEffect
                             , message::Defended
@@ -80,20 +93,31 @@ public:
     /// Adds a new message to the log
     template <typename M>
     void appendMessage(M&& m) noexcept {
+        if constexpr (std::is_same_v<std::remove_cv_t<M>, message::SkillUsed>)
+            skill_used.emplace(m); // copy, not move
         messages.emplace_back(std::forward<M>(m));
     }
 
-    /// Inspect the message log
-    [[nodiscard]] const std::vector<Message>& inspect() const noexcept {
-        return messages;
+    /// Get a constant iterator to the start of the messages
+    [[nodiscard]] decltype(auto) begin() const noexcept {
+        return messages.cbegin();
     }
 
-    /// Destructively retrieves the message log
-    [[nodiscard]] std::vector<Message> pop() noexcept {
-        return std::exchange(messages, decltype(messages){});
+    /// Get a constant iterator to the end of the messages
+    [[nodiscard]] decltype(auto) end() const noexcept {
+        return messages.cend();
+    }
+
+    /// Get the last skill in the message log, if any
+    ///
+    /// This should always be the skill with its affects being calculated;
+    /// that is, calculate all skill effects before performing any other skills
+    [[nodiscard]] std::optional<message::SkillUsed> skill() const noexcept {
+        return skill_used;
     }
 
 private:
+    std::optional<message::SkillUsed> skill_used;
     std::vector<Message> messages;
 };
 

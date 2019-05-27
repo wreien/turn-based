@@ -189,6 +189,8 @@ auto generateTeams() {
             auto e = loadEntity(std::move(id));
             if (team == Team::Blue)
                 e->assignController<battle::PlayerController>();
+            else
+                e->assignController<battle::NPCController>();
 
             return e;
         };
@@ -417,11 +419,16 @@ void printMessage(const battle::Message& m) {
                       << yellow_colour << su.skill->getDetails().getName()
                       << reset_colour << " on " << su.target.getID().name << "!\n";
         },
+        [](const Miss& m) {
+            std::cout << m.entity.getID().name << " avoided the attack!\n";
+        },
+        [](const Critical& c) {
+            std::cout << c.entity.getID().name << " took a critical hit!\n";
+        },
         [](const PoolChanged& pc) {
             const auto name = pc.entity.getID().name;
             const auto diff = pc.new_value - pc.old_value;
-            std::string poolname = (pc.pool == battle::Pool::HP)
-                ? "HP" : ((pc.pool == battle::Pool::MP) ? "MP" : "Tech");
+            std::string poolname = to_string(pc.pool);
             if (diff < 0) {
                 std::cout << name << " lost " << yellow_colour
                           << -diff << " " << poolname << reset_colour << "!\n";

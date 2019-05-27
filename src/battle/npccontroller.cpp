@@ -30,6 +30,9 @@ Action NPCController::go(const BattleView& view) {
     case SkillSpread::AoE:
         return action::Skill{ choice, *random(view.enemies) };
     }
+
+    // shouldn't ever get here; just shut up GCC
+    return action::Defend {};
 }
 
 }
