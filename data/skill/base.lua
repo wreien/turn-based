@@ -31,7 +31,7 @@ local function optional_value_enum(s, name, value, enum)
     end
     -- this is ugly, but it's because enums are read-only and hence don't
     -- actually contain their members for real; we look at the index instead.
-    for k, v in pairs(getmetatable(enum).__index) do
+    for _, v in pairs(getmetatable(enum).__index) do
         if r == v then return end
     end
     error("'" .. name .. '.' .. value .. "' must be a member of '" .. value .. "'.")
@@ -41,7 +41,7 @@ end
 local function warn_fractional(s, name, value)
     local x = s[value]
     if x ~= nil then
-        local integral, fractional = math.modf(s[value])
+        local _, fractional = math.modf(s[value])
         if fractional ~= 0 then
             error("'" .. name .. '.' .. value .. "' should be a whole number.")
         end
@@ -53,7 +53,7 @@ local function make_read_only(func)
         local ret = func(...)
         return setmetatable({}, {
             __index = ret,
-            __newindex = function(t, k, v)
+            __newindex = function()
                 error("table is read only!")
             end,
             __metatable = false
@@ -66,10 +66,10 @@ skilllist_mt.__newindex = function (table, key, value)
         error("'skill.list." .. key .. "' must be a function, got " .. type(value))
     end
 
-    s = value(1)  -- just test for level 1
+    local s = value(1)  -- just test for level 1
 
     if type(s) ~= "table" then
-        error("'skill.list." .. key .. "()" .. "' must return a table, got " .. type(v))
+        error("'skill.list." .. key .. "()" .. "' must return a table, got " .. type(s))
     end
 
     require_value_type(s, key, "desc", "string")

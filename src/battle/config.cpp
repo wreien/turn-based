@@ -13,7 +13,9 @@
 #include <sol/sol.hpp>
 
 // helpers to set up the lua environment
-namespace battle::config {
+namespace {
+
+    using namespace battle;
 
     struct EntityLogger {
         EntityLogger(Entity* e, BattleSystem* s, MessageLogger* l)
@@ -27,38 +29,40 @@ namespace battle::config {
         MessageLogger* logger;
     };
 
-    // TODO: noexcept part of type (but can I really be bothered...)
+    template <typename T, typename... Args>
+    struct same_as_first : std::false_type {};
+    template <typename T, typename... Args>
+    struct same_as_first<T, T, Args...> : std::true_type {};
+    template <typename T, typename... Args>
+    inline constexpr bool same_as_first_v = same_as_first<T, Args...>::value;
 
     template <typename Ret, typename... Args>
-    auto wrap_entity_fn(Ret (Entity::* ptr)(MessageLogger&, Args...)) {
-        return [ptr](EntityLogger& self, Args&&... args) {
-            return (self.entity->*ptr)(*self.logger, std::forward<Args>(args)...);
+    auto wrapper_helper(Ret (Entity::* ptr)(Args...) const noexcept) {
+        return [ptr](const EntityLogger& self, Args&&... args) {
+            if constexpr (same_as_first_v<MessageLogger, Args...>)
+                return (self.entity->*ptr)(*self.logger, std::forward<Args>(args)...);
+            else
+                return (self.entity->*ptr)(std::forward<Args>(args)...);
         };
     }
 
+    // wrap a function as a "property"
+    // this should be a read-only, and either takes no arguments or just a logger
     template <typename Ret, typename... Args>
-    auto wrap_entity_fn(Ret (Entity::* ptr)(MessageLogger&, Args...) const) {
-        return [ptr](EntityLogger& self, Args&&... args) {
-            return (self.entity->*ptr)(*self.logger, std::forward<Args>(args)...);
-        };
+    auto wrap_entity_property(Ret (Entity::* ptr)(Args...) const noexcept) {
+        static_assert(sizeof...(Args) <= 1);
+        return sol::readonly_property(wrapper_helper(ptr));
     }
 
-    template <typename Ret, typename... Args>
-    auto wrap_entity_fn(Ret (Entity::* ptr)(Args...)) {
-        return [ptr](EntityLogger& self, Args&&... args) {
-            return (self.entity->*ptr)(std::forward<Args>(args)...);
-        };
+    // wrap a non-property function as an actual function
+    template <typename FnPtr>
+    auto wrap_entity_function(FnPtr ptr) {
+        static_assert(std::is_member_function_pointer_v<std::decay_t<FnPtr>>);
+        return wrapper_helper(ptr);
     }
 
-    template <typename Ret, typename... Args>
-    auto wrap_entity_fn(Ret (Entity::* ptr)(Args...) const) {
-        return [ptr](EntityLogger& self, Args&&... args) {
-            return (self.entity->*ptr)(std::forward<Args>(args)...);
-        };
-    }
-
-
-    // wrap_entity_fn but only for `drain' and `restore' functions
+    // wrap_entity_function but explicitly for `drain' and `restore' functions
+    // provides automatic conversion in case we get a floating-point number
     auto wrap_drain_restore(void (Entity::* ptr)(MessageLogger& logger, int amt)) {
         return sol::overload(
             [ptr](EntityLogger& self, int amt) {
@@ -75,7 +79,17 @@ namespace battle::config {
         auto metatable = lua.new_usertype<EntityLogger>("logged_entity",
             "new", sol::no_constructor);
 
-        metatable["stats"] = sol::readonly_property(wrap_entity_fn(&Entity::getStats));
+        auto get_id_field = [](auto field) {
+            return sol::readonly_property(
+                [field](const EntityLogger& el){ return el.entity->getID().*field; }
+            );
+        };
+
+        metatable["kind"] = get_id_field(&EntityID::kind);
+        metatable["type"] = get_id_field(&EntityID::type);
+        metatable["name"] = get_id_field(&EntityID::name);
+
+        metatable["stats"] = wrap_entity_function(&Entity::getStats);
 
         metatable["drainHP"]   = wrap_drain_restore(&Entity::drain<Pool::HP>);
         metatable["drainMP"]   = wrap_drain_restore(&Entity::drain<Pool::MP>);
@@ -85,23 +99,19 @@ namespace battle::config {
         metatable["restoreMP"]   = wrap_drain_restore(&Entity::restore<Pool::MP>);
         metatable["restoreTech"] = wrap_drain_restore(&Entity::restore<Pool::Tech>);
 
-        metatable["getKind"] = [](EntityLogger& el){ return el.entity->getID().kind; };
-        metatable["getType"] = [](EntityLogger& el){ return el.entity->getID().type; };
-        metatable["getName"] = [](EntityLogger& el){ return el.entity->getID().name; };
+        metatable["level"]      = wrap_entity_property(&Entity::getLevel);
+        metatable["experience"] = wrap_entity_property(&Entity::getExperience);
 
-        metatable["getLevel"]      = wrap_entity_fn(&Entity::getLevel);
-        metatable["getExperience"] = wrap_entity_fn(&Entity::getExperience);
-
-        metatable["isDead"] = wrap_entity_fn(&Entity::isDead);
+        metatable["isDead"] = wrap_entity_function(&Entity::isDead);
 
         // need to do this because GCC has a bug;
         // see https://gcc.gnu.org/bugzilla/show_bug.cgi?id=64194
         auto getHP = &Entity::get<Pool::HP>;
         auto getMP = &Entity::get<Pool::MP>;
         auto getTech = &Entity::get<Pool::Tech>;
-        metatable["getHP"]   = wrap_entity_fn(getHP);
-        metatable["getMP"]   = wrap_entity_fn(getMP);
-        metatable["getTech"] = wrap_entity_fn(getTech);
+        metatable["hp"]   = wrap_entity_property(getHP);
+        metatable["mp"]   = wrap_entity_property(getMP);
+        metatable["tech"] = wrap_entity_property(getTech);
 
         metatable["getTeam"] = [](EntityLogger& el) {
             // create a new logged entity for every living member in the team
@@ -114,7 +124,7 @@ namespace battle::config {
             return v;
         };
 
-        metatable["getDeadTeamMates"] = [](EntityLogger& el) {
+        metatable["getDeadTeam"] = [](EntityLogger& el) {
             // create a new logged entity for every dead member in the team
             const auto members = el.system->teamMembersOf(el);
 
@@ -237,6 +247,14 @@ namespace battle::config {
             loadStatsMetatable(lua);
             loadMessageTypes(lua);
 
+            // set default logging global
+            lua.script(R"(
+                log_error = function(...)
+                    error("using 'log' outside of execution context")
+                end
+                log = log_error
+            )");
+
             // actually load the config files
             loadLuaPackages(lua);
 
@@ -246,6 +264,30 @@ namespace battle::config {
         return lua;
     }
 
+    /// RAII wrapper for setting the log function in lua
+    /// This way log calls the right thing while giving errors when it's not
+    /// supposed to be available
+    struct ScopedLogger {
+        // set the logging function
+        template <typename Fn>
+        ScopedLogger(Fn&& fn) {
+            lua()["log"] = std::forward<Fn>(fn);
+        }
+
+        // clear the logging function when done
+        ~ScopedLogger() {
+            lua().script("log = log_error\n");
+        }
+
+        // disallow copying
+        ScopedLogger(const ScopedLogger&) = delete;
+        ScopedLogger& operator=(const ScopedLogger&) = delete;
+    };
+
+    template <typename Fn>
+    [[nodiscard]] auto set_log(Fn&& fn) {
+        return ScopedLogger(std::forward<Fn>(fn));
+    }
 }
 
 // Entity configuration
@@ -301,7 +343,7 @@ namespace battle {
 
     struct SkillDetails::LuaHandle {
         LuaHandle(const std::string& name, int level) {
-            auto lua = config::lua();
+            auto lua = ::lua();
             sol::protected_function fn = lua["skill"]["list"][name];
             if (!fn.valid())
                 throw std::invalid_argument("unknown skill: " + name);
@@ -359,11 +401,12 @@ namespace battle {
             Entity& source, Entity& target,
             BattleSystem& system) const
     {
-        config::EntityLogger src{ &source, &system, &logger };
-        config::EntityLogger tgt{ &target, &system, &logger };
+        auto log = set_log([&logger](const Message& m) { logger.appendMessage(m); });
+
+        ::EntityLogger src{ &source, &system, &logger };
+        ::EntityLogger tgt{ &target, &system, &logger };
 
         sol::protected_function perform = handle->data["perform"];
-        auto log = [&logger](const Message& m) { logger.appendMessage(m); };
         auto ret = perform(handle->data, src, tgt, log);
         if (!ret.valid()) {
             sol::error err = ret;
