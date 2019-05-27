@@ -149,6 +149,8 @@ auto generateTeams() {
         blue_ids.push_back(gen_id(std::move(kind), std::move(type), count, false));
     }
 
+    std::cout << "\n";
+
     std::vector<battle::EntityID> red_ids;
     std::cout << "How many enemies?\n> ";
     int enemies = getInput<int>();
@@ -372,7 +374,7 @@ void handleUserChoice(battle::PlayerController& controller,
         std::exit(0);
     });
 
-    std::cout << "===\nWhat will " << controller.getEntity().getID().name << " do?\n";
+    std::cout << "What will " << controller.getEntity().getID().name << " do?\n";
     for (auto&& [id, msg, fn] : choice)
         std::cout << " - " <<  msg << "\n";
     std::cout << "> ";
@@ -455,8 +457,11 @@ int main() {
         battle::TurnInfo info = system.doTurn();
         for (const auto& m : info.messages)
             printMessage(m);
-        if (info.need_user_input)
+        std::cout << "\n";
+        if (info.need_user_input) {
             handleUserChoice(*info.controller, system);
+            std::cout << "\n";
+        }
     }
 
     std::cout << "Game over! Come back next time!\n" << std::flush;
