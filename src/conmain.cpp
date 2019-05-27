@@ -420,10 +420,12 @@ void printMessage(const battle::Message& m) {
                       << reset_colour << " on " << su.target.getID().name << "!\n";
         },
         [](const Miss& m) {
-            std::cout << m.entity.getID().name << " avoided the attack!\n";
+            std::cout << m.entity.getID().name
+                      << yellow_colour << " dodged " << reset_colour << "the attack!\n";
         },
         [](const Critical& c) {
-            std::cout << c.entity.getID().name << " took a critical hit!\n";
+            std::cout << c.entity.getID().name << " took a " 
+                      << yellow_colour << "critical hit" << reset_colour << "!\n";
         },
         [](const PoolChanged& pc) {
             const auto name = pc.entity.getID().name;
