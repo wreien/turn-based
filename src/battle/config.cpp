@@ -224,7 +224,6 @@ namespace {
             // load base lua libraries
             lua.open_libraries(
                 sol::lib::base,    // required
-                sol::lib::table,   // inserting into numbered lists
                 sol::lib::math,    // math fns
                 sol::lib::package  // require (TODO: do we want this?)
             );
@@ -236,7 +235,8 @@ namespace {
             lua.set_function("random", sol::overload(
                 []() { return ::random(0.0, 1.0); },
                 [](long max) { return ::random(1, max); },
-                [](long min, long max) { return ::random(min, max); }
+                [](long min, long max) { return ::random(min, max); },
+                [](double min, double max) { return ::random(min, max); }
             ));
             lua["math"]["random"] = lua["random"];
 

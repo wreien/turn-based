@@ -19,3 +19,27 @@ function skill.did_hit(accuracy, source, target)
     end
     return success
 end
+
+-- calculate raw damage for a skill
+-- params:
+--   skill = the skill being used
+--   source = user of the skill
+--   target = who the skill is aimed at
+function skill.raw_damage(skill, source, target)
+    local attack
+    local defense
+
+    if skill.method == method.physical then
+        attack = source:stats().p_atk
+        defense = target:stats().p_def
+    elseif skill.method == method.magical then
+        attack = source:stats().m_atk
+        defense = target:stats().m_def
+    else
+        error("raw_damage: skill.method must be physical or magical")
+    end
+
+    local variance = math.random(0.8, 1.2)
+    local raw = variance * (skill.power / 100) * (4 * attack - 2 * defense)
+    return math.max(raw, 0)  -- damage >= 0
+end

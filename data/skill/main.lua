@@ -2,10 +2,11 @@ require "skill.base"
 require "skill.func"
 
 function skill.list.attack(level)
+    assert(level == 1)
     return {
-        desc = "A level-based attacking move.",
+        desc = "A basic attacking move.",
 
-        power = 5,
+        power = 50,
         accuracy = 60,
         method = method.physical,
 
@@ -13,7 +14,8 @@ function skill.list.attack(level)
             -- does damage equal to "skill_level * user_level"
             for _, entity in ipairs(target:getTeam()) do
                 if skill.did_hit(self.accuracy, source, entity) then
-                    entity:drainHP(math.random(1,10) + level * source.level)
+                    local raw = skill.raw_damage(self, source, entity)
+                    entity:drainHP(raw)
                 end
             end
         end
