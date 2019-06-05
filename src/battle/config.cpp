@@ -232,12 +232,18 @@ namespace {
             // actually get the libraries we *do* want
             lua.script("package.path = './data/?.lua'");
 
+            // create random functions using my generators for both reals and ints
             lua.set_function("random", sol::overload(
-                []() { return ::random(0.0, 1.0); },
+                [] { return ::random(0.0, 1.0); },
                 [](long max) { return ::random(1, max); },
-                [](long min, long max) { return ::random(min, max); },
+                [](long min, long max) { return ::random(min, max); }
+            ));
+            lua.set_function("randf", sol::overload(
+                [] { return ::random(0.0, 1.0); },
+                [](double max) { return ::random(0.0, max); },
                 [](double min, double max) { return ::random(min, max); }
             ));
+            // replace default random with my integer variant
             lua["math"]["random"] = lua["random"];
 
             // load types and metatables

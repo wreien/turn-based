@@ -10,6 +10,8 @@ read_globals = {
     "element",
     "message",
     "log",
+    "random",
+    "randf",
 }
 
 max_line_length = 88

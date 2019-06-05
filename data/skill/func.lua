@@ -11,7 +11,7 @@ if skill == nil then skill = {} end
 --   true if hit, false otherwise
 function skill.did_hit(accuracy, source, target)
     local hit_chance = accuracy + source:stats().skill - target:stats().evade
-    local random_var = math.random(100)
+    local random_var = random(100)
 
     local success = (hit_chance >= random_var)
     if not success then
@@ -39,7 +39,7 @@ function skill.raw_damage(skill, source, target)
         error("raw_damage: skill.method must be physical or magical")
     end
 
-    local variance = math.random(0.8, 1.2)
+    local variance = randf(0.8, 1.2)
     local raw = variance * (skill.power / 100) * (4 * attack - 2 * defense)
-    return math.max(raw, 0)  -- damage >= 0
+    return math.max(raw, 0)  -- ensure positive damage at this stage
 end
