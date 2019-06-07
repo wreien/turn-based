@@ -42,9 +42,18 @@ local function warn_fractional(s, name, value)
     end
 end
 
-local function make_read_only(func)
+local function prepare(func)
     return function(...)
+        -- get result
         local ret = func(...)
+
+        -- set default values
+        ret.max_level = ret.max_level or 1
+        ret.method = ret.method or method.none
+        ret.spread = ret.spread or spread.single
+        ret.element = ret.element or element.neutral
+
+        -- make read only and return it
         return setmetatable({}, {
             __index = ret,
             __newindex = function()
@@ -90,7 +99,7 @@ skilllist_mt.__newindex = function (table, key, value)
     warn_fractional(s, key, "accuracy")
 
     -- can't do a direct assignment here; we'll just call __newindex again!
-    rawset(table, key, make_read_only(value))
+    rawset(table, key, prepare(value))
 end
 
 

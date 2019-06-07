@@ -139,20 +139,20 @@ namespace {
     void loadStatsMetatable(sol::state_view& lua) {
         auto metatable = lua.new_usertype<Stats>("stats");
 
-        metatable["max_hp"]   = &Stats::max_hp,
-        metatable["max_mp"]   = &Stats::max_mp,
-        metatable["max_tech"] = &Stats::max_tech,
+        metatable["max_hp"]   = &Stats::max_hp;
+        metatable["max_mp"]   = &Stats::max_mp;
+        metatable["max_tech"] = &Stats::max_tech;
 
-        metatable["p_atk"] = &Stats::p_atk,
-        metatable["p_def"] = &Stats::p_def,
-        metatable["m_atk"] = &Stats::m_atk,
-        metatable["m_def"] = &Stats::m_def,
-        metatable["skill"] = &Stats::skill,
-        metatable["evade"] = &Stats::evade,
-        metatable["speed"] = &Stats::speed,
+        metatable["p_atk"] = &Stats::p_atk;
+        metatable["p_def"] = &Stats::p_def;
+        metatable["m_atk"] = &Stats::m_atk;
+        metatable["m_def"] = &Stats::m_def;
+        metatable["skill"] = &Stats::skill;
+        metatable["evade"] = &Stats::evade;
+        metatable["speed"] = &Stats::speed;
 
         // not *quite* a real property
-        metatable["resist"] = sol::overload(
+        metatable["resists"] = sol::overload(
             &Stats::getResistance, &Stats::setResistance);
     }
 
@@ -389,7 +389,7 @@ namespace battle {
         const auto& t = handle->data;
 
         desc = t["desc"];
-        max_level = t["max_level"].get_or(1);
+        max_level = t["max_level"];
 
         hp_cost = opt(t, "hp_cost");
         mp_cost = opt(t, "mp_cost");
@@ -398,9 +398,9 @@ namespace battle {
 
         power = opt(t, "power");
         accuracy = opt(t, "accuracy");
-        method = t["method"].get_or(SkillMethod::None);
-        spread = t["spread"].get_or(SkillSpread::Single);
-        element = t["element"].get_or(Element::Neutral);
+        method = t["method"];
+        spread = t["spread"];
+        element = t["element"];
     }
 
     void SkillDetails::perform(MessageLogger& logger,

@@ -34,7 +34,7 @@ struct Stats {
         { return resist[static_cast<decltype(resist)::size_type>(e)]; }
     constexpr void setResistance(Element e, int value) noexcept
         { resist[static_cast<decltype(resist)::size_type>(e)] = value; }
-    std::array<int, num_elements> resist;
+    std::array<int, num_elements> resist = {};
 };
 
 /// Lists valid "pooled" stats
