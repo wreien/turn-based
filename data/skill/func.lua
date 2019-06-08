@@ -64,11 +64,11 @@ end
 --   s = the skill to test the resistance for
 --   entity = the entity to test the resistance of
 -- returns a value suitable for use as a modifer
---   i.e, 20% resistance results in a return value of 1.2
+--   i.e, 20% resistance results in a return value of 0.8
 function skill.resistance(s, entity)
     -- TODO: correctly calculate secondary elements
     local resist = entity.stats:resists(s.element)
-    return resist / 100 + 1
+    return -resist / 100 + 1
 end
 
 
