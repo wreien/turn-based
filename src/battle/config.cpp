@@ -24,9 +24,18 @@ namespace {
 
         operator Entity&() noexcept { return *entity; }
 
+        Stats& getStats() {
+            if (!stat_cache)
+                stat_cache = entity->getStats();
+            return *stat_cache;
+        }
+
         Entity* entity;
         BattleSystem* system;
         MessageLogger* logger;
+
+    private:
+        std::optional<Stats> stat_cache;
     };
 
     template <typename T, typename... Args>
@@ -89,7 +98,7 @@ namespace {
         metatable["type"] = get_id_field(&EntityID::type);
         metatable["name"] = get_id_field(&EntityID::name);
 
-        metatable["stats"] = wrap_entity_function(&Entity::getStats);
+        metatable["stats"] = sol::readonly_property(&EntityLogger::getStats);
 
         metatable["drainHP"]   = wrap_drain_restore(&Entity::drain<Pool::HP>);
         metatable["drainMP"]   = wrap_drain_restore(&Entity::drain<Pool::MP>);
@@ -102,7 +111,7 @@ namespace {
         metatable["level"]      = wrap_entity_property(&Entity::getLevel);
         metatable["experience"] = wrap_entity_property(&Entity::getExperience);
 
-        metatable["isDead"] = wrap_entity_function(&Entity::isDead);
+        metatable["is_dead"] = wrap_entity_property(&Entity::isDead);
 
         // need to do this because GCC has a bug;
         // see https://gcc.gnu.org/bugzilla/show_bug.cgi?id=64194

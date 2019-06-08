@@ -14,7 +14,7 @@ function skill.did_hit(s, source, target, crit_difficulty)
     crit_difficulty = crit_difficulty or 6  -- set default value
 
     -- percentage chance of scoring a hit
-    local hit_chance = s.accuracy + source:stats().skill - target:stats().evade
+    local hit_chance = s.accuracy + source.stats.skill - target.stats.evade
 
     -- function to see if we score a hit
     local did_score_hit = function(chance) return chance >= random(100) end
@@ -45,11 +45,11 @@ function skill.raw_damage(s, source, target)
     local defense
 
     if s.method == method.physical then
-        attack = source:stats().p_atk
-        defense = target:stats().p_def
+        attack = source.stats.p_atk
+        defense = target.stats.p_def
     elseif s.method == method.magical then
-        attack = source:stats().m_atk
-        defense = target:stats().m_def
+        attack = source.stats.m_atk
+        defense = target.stats.m_def
     else
         error("raw_damage: skill.method must be physical or magical")
     end
@@ -79,7 +79,7 @@ function skill.default_perform(s, source, target)
         local result = skill.did_hit(s, source, entity)
         if result ~= 0 then
             local raw = skill.raw_damage(s, source, entity)
-            local mod = entity:stats():resists(s.element) / 100 + 1
+            local mod = entity.stats:resists(s.element) / 100 + 1
 
             -- if we scored a crit, do double damage
             if result == 2 then
