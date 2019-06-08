@@ -59,6 +59,18 @@ function skill.raw_damage(s, source, target)
     return math.max(raw, 0)  -- ensure positive damage at this stage
 end
 
+-- gets the resistance to the skill for an entity
+-- params:
+--   s = the skill to test the resistance for
+--   entity = the entity to test the resistance of
+-- returns a value suitable for use as a modifer
+--   i.e, 20% resistance results in a return value of 1.2
+function skill.resistance(s, entity)
+    -- TODO: correctly calculate secondary elements
+    local resist = entity.stats:resists(s.element)
+    return resist / 100 + 1
+end
+
 
 -- generate a 'perform' function that is often correct;
 -- no support for any perks at the moment, but good for prototyping
@@ -79,7 +91,7 @@ function skill.default_perform(s, source, target)
         local result = skill.did_hit(s, source, entity)
         if result ~= 0 then
             local raw = skill.raw_damage(s, source, entity)
-            local mod = entity.stats:resists(s.element) / 100 + 1
+            local mod = skill.resistance(s, entity)
 
             -- if we scored a crit, do double damage
             if result == 2 then
