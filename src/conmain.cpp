@@ -308,21 +308,25 @@ void handleUserChoice(battle::PlayerController& controller,
             auto red_team = system.teamMembersOf(battle::Team::Red);
             auto blue_team = system.teamMembersOf(battle::Team::Blue);
 
+            auto is_dead = [](auto&& entity){ return entity->isDead(); };
+            red_team.erase(
+                std::remove_if(red_team.begin(), red_team.end(), is_dead),
+                red_team.end());
+            blue_team.erase(
+                std::remove_if(blue_team.begin(), blue_team.end(), is_dead),
+                blue_team.end());
+
             i = 0;
             std::cout << "Red team:\n";
             for (auto&& target : red_team) {
-                if (!target->isDead()) {
-                    std::cout << "  " << ++i << ". ";
-                    drawEntity(*target);
-                }
+                std::cout << "  " << ++i << ". ";
+                drawEntity(*target);
             }
             unsigned splitpoint = i;
             std::cout << "Blue Team:\n";
             for (auto&& target : blue_team) {
-                if (!target->isDead()) {
-                    std::cout << "  " << ++i << ". ";
-                    drawEntity(*target);
-                }
+                std::cout << "  " << ++i << ". ";
+                drawEntity(*target);
             }
             std::cout << "> ";
 
