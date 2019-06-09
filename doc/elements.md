@@ -53,7 +53,7 @@ primary elements for the secondary element are also considered. For example,
 an entity's resistance to Ice is calculated based on not only their Ice
 resistance, but also their Water and Air resistances.
 
-_(TODO: what is the exact formula?)_
+**TODO**: what is the exact formula?
 
 The secondary elements are:
 
@@ -64,5 +64,5 @@ The secondary elements are:
 - Metal (`element.metal`); formed from Earth and Fire
 - Dust (`element.sand`); formed from Air and Earth
 
-_(TODO: finalise what we call the Dust element, and update `element.sand` to
-match)_
+**TODO**: finalise what we call the Dust element, and update `element.sand` to
+match

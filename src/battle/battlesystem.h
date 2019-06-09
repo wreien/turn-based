@@ -4,7 +4,7 @@
 #include <vector>
 #include <utility>
 #include <memory>
-#include "messages.h"
+#include "battle/messages.h"
 
 namespace battle {
 

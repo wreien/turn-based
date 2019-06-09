@@ -1,11 +1,11 @@
 #ifndef BATTLE_ACTION_H_INCLUDED
 #define BATTLE_ACTION_H_INCLUDED
 
-#include <vector>
-#include <variant>
 #include <string>
+#include <variant>
+#include <vector>
 
-#include "skillref.h"
+#include "battle/skillref.h"
 
 namespace battle {
 

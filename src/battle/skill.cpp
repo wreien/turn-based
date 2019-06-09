@@ -1,7 +1,8 @@
-#include "skill.h"
-#include "entity.h"
-#include "messages.h"
-#include "battlesystem.h"
+#include "battle/skill.h"
+
+#include "battle/battlesystem.h"
+#include "battle/entity.h"
+#include "battle/messages.h"
 
 namespace battle {
 

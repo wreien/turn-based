@@ -50,3 +50,10 @@ Currently the following renderers are available:
     - the `colour_console` branch has a possibly-outdated version with (some)
       colours.
 - `sfml`: a 2D graphical interface. (Really just a black screen at the moment)
+
+## Documentation
+
+There is some documentation available under the `doc/` folder regarding the
+layout and use of the Lua configuration files, particularly for designing
+[skills](doc/skills.md). At some point this will be moved into its own thing
+rather than relying on GitHub for this, but that can wait ;)

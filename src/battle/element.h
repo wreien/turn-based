@@ -32,7 +32,7 @@ enum class Element {
     _count
 };
 
-static constexpr const unsigned num_elements = static_cast<unsigned>(Element::_count);
+inline constexpr unsigned num_elements = static_cast<unsigned>(Element::_count);
 
 [[nodiscard]] constexpr bool isPrimaryElement(Element e) noexcept {
     return e == Element::Fire

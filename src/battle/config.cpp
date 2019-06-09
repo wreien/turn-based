@@ -1,10 +1,9 @@
-#include "config.h"
-#include "skilldetails.h"
-#include "skill.h"
-#include "entity.h"
-#include "stats.h"
-#include "battlesystem.h"
-#include "../random.h"
+#include "battle/battlesystem.h"
+#include "battle/entity.h"
+#include "battle/skill.h"
+#include "battle/skilldetails.h"
+#include "battle/stats.h"
+#include "util/random.h"
 
 #include <type_traits>
 #include <cmath>
@@ -24,9 +23,18 @@ namespace {
 
         operator Entity&() noexcept { return *entity; }
 
+        Stats& getStats() {
+            if (!stat_cache)
+                stat_cache = entity->getStats();
+            return *stat_cache;
+        }
+
         Entity* entity;
         BattleSystem* system;
         MessageLogger* logger;
+
+    private:
+        std::optional<Stats> stat_cache;
     };
 
     template <typename T, typename... Args>
@@ -89,7 +97,7 @@ namespace {
         metatable["type"] = get_id_field(&EntityID::type);
         metatable["name"] = get_id_field(&EntityID::name);
 
-        metatable["stats"] = wrap_entity_function(&Entity::getStats);
+        metatable["stats"] = sol::readonly_property(&EntityLogger::getStats);
 
         metatable["drainHP"]   = wrap_drain_restore(&Entity::drain<Pool::HP>);
         metatable["drainMP"]   = wrap_drain_restore(&Entity::drain<Pool::MP>);
@@ -102,7 +110,7 @@ namespace {
         metatable["level"]      = wrap_entity_property(&Entity::getLevel);
         metatable["experience"] = wrap_entity_property(&Entity::getExperience);
 
-        metatable["isDead"] = wrap_entity_function(&Entity::isDead);
+        metatable["is_dead"] = wrap_entity_property(&Entity::isDead);
 
         // need to do this because GCC has a bug;
         // see https://gcc.gnu.org/bugzilla/show_bug.cgi?id=64194
@@ -139,20 +147,20 @@ namespace {
     void loadStatsMetatable(sol::state_view& lua) {
         auto metatable = lua.new_usertype<Stats>("stats");
 
-        metatable["max_hp"]   = &Stats::max_hp,
-        metatable["max_mp"]   = &Stats::max_mp,
-        metatable["max_tech"] = &Stats::max_tech,
+        metatable["max_hp"]   = &Stats::max_hp;
+        metatable["max_mp"]   = &Stats::max_mp;
+        metatable["max_tech"] = &Stats::max_tech;
 
-        metatable["p_atk"] = &Stats::p_atk,
-        metatable["p_def"] = &Stats::p_def,
-        metatable["m_atk"] = &Stats::m_atk,
-        metatable["m_def"] = &Stats::m_def,
-        metatable["skill"] = &Stats::skill,
-        metatable["evade"] = &Stats::evade,
-        metatable["speed"] = &Stats::speed,
+        metatable["p_atk"] = &Stats::p_atk;
+        metatable["p_def"] = &Stats::p_def;
+        metatable["m_atk"] = &Stats::m_atk;
+        metatable["m_def"] = &Stats::m_def;
+        metatable["skill"] = &Stats::skill;
+        metatable["evade"] = &Stats::evade;
+        metatable["speed"] = &Stats::speed;
 
         // not *quite* a real property
-        metatable["resist"] = sol::overload(
+        metatable["resists"] = sol::overload(
             &Stats::getResistance, &Stats::setResistance);
     }
 
@@ -224,7 +232,6 @@ namespace {
             // load base lua libraries
             lua.open_libraries(
                 sol::lib::base,    // required
-                sol::lib::table,   // inserting into numbered lists
                 sol::lib::math,    // math fns
                 sol::lib::package  // require (TODO: do we want this?)
             );
@@ -233,11 +240,18 @@ namespace {
             // actually get the libraries we *do* want
             lua.script("package.path = './data/?.lua'");
 
+            // create random functions using my generators for both reals and ints
             lua.set_function("random", sol::overload(
-                []() { return ::random(0.0, 1.0); },
-                [](long max) { return ::random(1, max); },
-                [](long min, long max) { return ::random(min, max); }
+                [] { return util::random(0.0, 1.0); },
+                [](long max) { return util::random(1, max); },
+                [](long min, long max) { return util::random(min, max); }
             ));
+            lua.set_function("randf", sol::overload(
+                [] { return util::random(0.0, 1.0); },
+                [](double max) { return util::random(0.0, max); },
+                [](double min, double max) { return util::random(min, max); }
+            ));
+            // replace default random with my integer variant
             lua["math"]["random"] = lua["random"];
 
             // load types and metatables
@@ -290,54 +304,6 @@ namespace {
     }
 }
 
-// Entity configuration
-namespace battle {
-
-    std::tuple<Stats, std::vector<Skill>>
-    getEntityDetails(const std::string& kind, const std::string& type, int level) {
-        // TODO actually lua this
-        // TODO even if not, can't wait for designated initializers (C++20)
-        std::vector<Skill> skills;
-        if (kind == "default" && type == "good") {
-            Stats stats{
-                27 * level,    // hp
-                4 + level,     // mp
-                10 + level,    // tech
-                3 + level,     // p_atk
-                4 + level / 2, // p_def
-                2 + level / 2, // m_atk
-                2 + level,     // m_def
-                100,           // skill
-                0,             // evade
-                4 + level,     // speed
-                { 0 },         // resist
-            };
-            skills.emplace_back("attack");
-
-            return std::make_tuple(stats, std::move(skills));
-        } else if (kind == "default" && type == "evil") {
-            Stats stats{
-                24 * level,    // hp
-                4 + level,     // mp
-                10 + level,    // tech
-                3 + level / 2, // p_atk
-                5 + level,     // p_def
-                4 + level,     // m_atk
-                2 + level / 2, // m_def
-                80,            // skill
-                20,            // evade
-                6 + level,     // speed
-                { 0 },         // resist
-            };
-            skills.emplace_back("attack");
-
-            return std::make_tuple(stats, std::move(skills));
-        }
-        throw std::invalid_argument(kind + ":" + type + " is not a real entity type");
-    }
-
-}
-
 // SkillDetails implementation
 namespace battle {
 
@@ -383,7 +349,7 @@ namespace battle {
         const auto& t = handle->data;
 
         desc = t["desc"];
-        max_level = t["max_level"].get_or(1);
+        max_level = t["max_level"];
 
         hp_cost = opt(t, "hp_cost");
         mp_cost = opt(t, "mp_cost");
@@ -392,9 +358,9 @@ namespace battle {
 
         power = opt(t, "power");
         accuracy = opt(t, "accuracy");
-        method = t["method"].get_or(SkillMethod::None);
-        spread = t["spread"].get_or(SkillSpread::Single);
-        element = t["element"].get_or(Element::Neutral);
+        method = t["method"];
+        spread = t["spread"];
+        element = t["element"];
     }
 
     void SkillDetails::perform(MessageLogger& logger,

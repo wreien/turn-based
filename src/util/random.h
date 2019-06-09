@@ -6,10 +6,15 @@
 #include <initializer_list>
 #include <stdexcept>
 
+namespace util {
+
+
 namespace _detail::random {
     inline auto& generator() {
         static auto gen = [](){
             std::random_device dev;
+            // TODO: better random device initialization?
+            // TODO: generate different random functions for different subsystems?
             return std::mt19937{ dev() };
         }();
         return gen;
@@ -44,42 +49,28 @@ std::enable_if_t<std::is_arithmetic_v<T>, T> random(T max) {
 
 namespace _detail::random {
     template <typename C>
-    auto& fromContainer(C&& container) {
-        auto s = std::size(container);
-        if (s == 0)
+    decltype(auto) fromContainer(C&& container) {
+        const auto size = std::size(container);
+        if (size == 0)
             throw std::invalid_argument("random: empty container");
-        using T = std::remove_reference_t<C>;
-        auto v = static_cast<typename T::difference_type>(::random(s - 1));
-        if constexpr (std::is_const_v<C>)
-            return *std::next(std::cbegin(container), v);
-        else
-            return *std::next(std::begin(container), v);
+
+        auto it = std::begin(container);
+        using diff_t = typename std::iterator_traits<decltype(it)>::difference_type;
+        return *std::next(it, static_cast<diff_t>(util::random(size - 1)));
     }
 }
 
-// Select a random element from a container glvalue. Returns a reference.
-template <typename T>
-auto random(T& container) -> decltype(*std::begin(container)) {
-    return _detail::random::fromContainer(container);
+// Select a random element from a container.
+template <typename T, typename = std::void_t<
+    decltype(std::begin(std::declval<T>())), decltype(std::size(std::declval<T>()))>>
+decltype(auto) random(T&& container) {
+    return _detail::random::fromContainer(std::forward<T>(container));
 }
 
-// Select a random element from a const ref to a container. Returns a const reference.
+// Select a random element from an initializer list of options.
+// Always returns by value (does it make sense to return reference to il?)
 template <typename T>
-auto random(const T& container) -> decltype(*std::cbegin(container)) {
-    return _detail::random::fromContainer(container);
-}
-
-// Select a random element from a container xvalue. Returns a value.
-template <typename T>
-auto random(T&& container)
-    -> std::remove_reference_t<decltype(*std::begin(container))>
-{
-    return _detail::random::fromContainer(container);
-}
-
-// Select a random element from an initializer list of options. Returns a value.
-template <typename T>
-auto random(std::initializer_list<T> il) -> typename decltype(il)::value_type {
+auto random(std::initializer_list<T> il) {
     return _detail::random::fromContainer(il);
 }
 
@@ -90,5 +81,8 @@ void random(...) {
     constexpr auto fail = [](){ return false; }();
     static_assert(fail, "must provide a number or container type to 'random'");
 }
+
+
+} // namespace util
 
 #endif // RANDOM_H_INCLUDED

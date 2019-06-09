@@ -7,19 +7,19 @@
 #include <locale>
 #include <memory>
 #include <numeric>
+#include <sstream>
 #include <string>
 #include <string_view>
 #include <unordered_map>
 
+#include "conutil.h"
 #include "battle/battlesystem.h"
 #include "battle/entity.h"
-#include "battle/config.h"
 #include "battle/npccontroller.h"
 #include "battle/playercontroller.h"
-#include "conutil.h"
-#include "overload.h"
+#include "util/overload.h"
 
-// TODO: do these actually work on Windows? This is so dodgy...
+// TODO this is just really dodgy
 constexpr const char red_colour[]    = "\033[31m";
 constexpr const char yellow_colour[] = "\033[33m";
 constexpr const char blue_colour[]   = "\033[36m";
@@ -139,8 +139,8 @@ auto generateTeams() {
             std::string path = "./data/entity/" + kind + "." + type + ".entity";
             std::ifstream in { path };
             if (!in) {
-                std::cout << "Unknown entity [" << yellow_colour << kind 
-                          << reset_colour << ", " << yellow_colour << type 
+                std::cout << "Unknown entity [" << yellow_colour << kind
+                          << reset_colour << ", " << yellow_colour << type
                           << reset_colour << "]. Try again: ";
             } else
                 return std::make_pair(kind, type);
@@ -157,6 +157,8 @@ auto generateTeams() {
         int count = ++seen_ids[kind + "\0" + type];
         blue_ids.push_back(gen_id(std::move(kind), std::move(type), count, false));
     }
+
+    std::cout << "\n";
 
     std::vector<battle::EntityID> red_ids;
     std::cout << bold_colour << "How many enemies?\n> " << reset_colour;
@@ -393,7 +395,7 @@ void handleUserChoice(battle::PlayerController& controller,
         std::exit(0);
     });
 
-    std::cout << bold_colour << "===\nWhat will "
+    std::cout << bold_colour << "What will "
               << controller.getEntity().getID().name << bold_colour
               << " do?\n" << reset_colour;
 
@@ -413,7 +415,7 @@ void handleUserChoice(battle::PlayerController& controller,
 
 void printMessage(const battle::Message& m) {
     using namespace battle::message;
-    std::visit(overload{
+    std::visit(util::overload{
         [](const SkillUsed& su) {
             std::cout << su.source.getID().name << " used "
                       << yellow_colour << su.skill->getDetails().getName()
@@ -424,7 +426,7 @@ void printMessage(const battle::Message& m) {
                       << yellow_colour << " dodged " << reset_colour << "the attack!\n";
         },
         [](const Critical& c) {
-            std::cout << c.entity.getID().name << " took a " 
+            std::cout << c.entity.getID().name << " took a "
                       << yellow_colour << "critical hit" << reset_colour << "!\n";
         },
         [](const PoolChanged& pc) {
@@ -490,6 +492,7 @@ int main() {
             printMessage(m);
         if (info.need_user_input)
             handleUserChoice(*info.controller, system);
+        std::cout << "\n";
     }
 
     std::cout << bold_colour << "Game over! Come back next time!\n";

@@ -1,7 +1,7 @@
 #ifndef BATTLE_NPCCONTROLLER_H_INCLUDED
 #define BATTLE_NPCCONTROLLER_H_INCLUDED
 
-#include "controller.h"
+#include "battle/controller.h"
 
 namespace battle {
 

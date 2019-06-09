@@ -1,10 +1,11 @@
-#include "battlesystem.h"
+#include "battle/battlesystem.h"
 
 #include <algorithm>
-#include "controller.h"
-#include "battleview.h"
-#include "entity.h"
-#include "../overload.h"
+
+#include "battle/battleview.h"
+#include "battle/controller.h"
+#include "battle/entity.h"
+#include "util/overload.h"
 
 namespace battle {
 
@@ -105,7 +106,7 @@ TurnInfo BattleSystem::doTurn() {
     auto& controller = c.entity->getController();
     Action act = controller.go(view);
 
-    std::visit(overload{
+    std::visit(util::overload{
         [&info,c](action::Defend){
             // at this stage, do nothing ;)
             info.messages.appendMessage(message::Defended{ *c.entity });

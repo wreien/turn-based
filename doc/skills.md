@@ -65,10 +65,16 @@ Bookkeeping for the skill. `desc` is required, but `max_level` can be
 defaulted to `1`. Other information may appear here in the future, for example
 categorising skill types in the UI or linking to sprite/animation data.
 
-  Attribute   | Description
- -------------|------------------------------------------------------
-  `desc`      | An English description for the skill's effect
-  `maxlevel`  | The maximum level the skill can reach; default `1`
+  Attribute   | Type    | Description
+ -------------|---------|--------------------------------------------
+  `desc`        | string  | An English description for the skill's effect
+  `max_level`   | number  | The maximum level the skill can reach; default `1`
+
+Note that `max_level` should be an integer — that is, it cannot be a
+fractional value.
+
+**TODO**: provide a list of valid perks + their descriptions? (These just need
+to be strings)
 
 ### Costs
 
@@ -76,24 +82,26 @@ Checks to make sure that the skill is castable, and what the cast will cost
 the user. All of these fields may be, and default to, `nil`, representing no
 cost of that form.
 
-  Attribute   | Description
- -------------|------------------------------------------------------
-  `hp_cost`   | The amount of HP required to cast the skill
-  `mp_cost`   | The amount of MP required to cast the skill
-  `tech_cost` | The amount of Tech required to cast the skill
-  `items`     | Any other components required to cast the skill
+  Attribute   | Type    | Description
+ -------------|---------|--------------------------------------------
+  `hp_cost`     | number  | The amount of HP required to cast the skill
+  `mp_cost`     | number  | The amount of MP required to cast the skill
+  `tech_cost`   | number  | The amount of Tech required to cast the skill
+  `items`       | list    | Any other components required to cast the skill
 
 Apart from `items`, all cost values must be integers (whole numbers); you may
 make use of the "flooring" division operator `//` to ensure this (or otherwise
 use `math.floor(number)`) if there is a possibility of creating fractional
 numbers to forcefully round down to the nearest whole number.
 
-On the other hand, `items` is a list of items required; specify the same item
-multiple times if necessary, such as:
+On the other hand, `items` is a list of items required (as strings); specify
+the same item multiple times if necessary, such as:
 
 ```lua
 items = { "herb", "herb", "flower" }
 ```
+
+(Items have not yet been implemented.)
 
 ### Attributes
 
@@ -102,42 +110,64 @@ they default to `nil`, a sort of "not-applicable" value. For example, a skill
 to poison an enemy would have `power = nil`, and could therefore just leave
 it out, but should specify `accuracy = 100` (unless it can't miss).
 
-  Attribute  | Description
- ------------|------------------------------------------------------
-  `power`    | The base damage for skill
-  `accuracy` | The base percentage chance for the skill to hit
-  `method`   | What stats of the source it uses; default `method.none`
-  `spread`   | Who the skill targets; default `spread.single`
-  `element`  | What element the skill is; default `element.neutral`
+  Attribute  | Type    | Description
+ ------------|---------|---------------------------------------------
+  `power`      | number  | The base damage for skill
+  `accuracy`   | number  | The base percentage chance for the skill to hit
+  `method`     | method  | What stats of the source it uses; default `method.none`
+  `spread`     | spread  | Who the skill targets; default `spread.single`
+  `element`    | element | What element the skill is; default `element.neutral`
 
 Like with the costs, `power` and `accuracy` should be integers.
 
-`method` can be one of `physical`, `magical`, `mixed`, or `none`. You must
-specify this as, for example, `method.none`.
+Possible values for `method`:
 
-`spread` can be one of `self`, `single`, `semiaoe`, `aoe`, and `field`. You
-must specify this as, for example, `spread.single`.
+  Value           | Description
+  ----------------|------------------------------------------------------
+  `method.physical` | Deals primarily physical damage (uses `p_atk` and `p_def`)
+  `method.magical`  | Deals primarily magical damage (uses `m_atk` and `m_def`)
+  `method.mixed`    | Deals damage that fits as neither physical nor magical
+  `method.none`     | Doesn't deal direct damage
 
-`element` is any one of the available elements. (See [the elements
-documentation](elements.md).)
+Possible values for `spread`:
+
+  Value          | Description
+  ---------------|--------------------------------------------------------
+  `spread.self`    | Can only target the skill user (source = target)
+  `spread.single`  | Targets any one entity
+  `spread.aoe`     | Target an entire team
+  `spread.semiaoe` | Targets an entire team, but focusses on an individual
+  `spread.field`   | Targets the entire battlefield (unimplemented)
+
+Finally, `element` is any one of the available elements. See [the elements
+documentation](elements.md) for more details.
+
+**TODO**: probably the attribute names and type names should be different some
+way; maybe some kind of namespacing for the types?
 
 ## Functionality
 
 To define exactly what the skill does, a data value `perform` must be
-provided. This is a function taking three parameters:
+provided. This is a function taking three parameters (you may pick the names,
+but the following are standard):
 
-- `self`: me, the skill using the function (and its details)
+- `self` or `s`: me, the skill using the function (and its details)
 - `source`: whoever used the skill in the first place
 - `target`: the entity the skill targeted (or `nil` if `spread.field`)
 
-`self` contains all the data specified in the skill you returned. For example,
-if you returned a skill with 80 power, then `self.power` is 80. Prefer to use
-this value rather than recalculating the desired attributes. The only
-calculated values you might ever need are `level` and `perks`, which are as
-described above.
+`self` (or `s`) contains all the data specified in the skill you returned. For
+example, if you returned a skill with 80 power, then `self.power` is 80.
+Prefer to use this value rather than recalculating the desired attributes. The
+only calculated values you might ever need are `level` and `perks`, which are
+as described [above](#representation).
 
 For details on the API for `source` and `target`, please see [the entity
-documentation](entity.md).
+documentation](entities.md).
+
+While developing, a useful placeholder `perform` function is
+`skill.default_perform`, which guesses a standard implementation based upon
+the skill's attributes. See [the helper function documentation](func.md)
+for more details.
 
 ## Example
 
@@ -169,7 +199,7 @@ skill.list["Eruption"] = function(level, perks)
         -- for niceness, we'll split the long description over multiple lines
         desc = "Unleash a volcanic eruption at a target, "
             .. "damaging their whole team.",
-        maxlevel = 5,
+        max_level = 5,
 
         -- we leave out hp_cost here as it's not relevant
         mp_cost = 30,
@@ -184,31 +214,18 @@ skill.list["Eruption"] = function(level, perks)
         method = method.magical,
         element = element.fire,
 
-        -- provide the function that actually does things
+        -- provide a default function to actually do things
         perform = function(self, source, target)
-            -- loop through every entity on their team
-            local team = target:getTeam()
-            for index, entity in ipairs(team) do
-                -- get the damage modifier (resistances)
-                -- (see skill helper function documentation for details)
-                local mod = skill.modifier(self, source, entity, target)
-
-                -- get the raw damage dealt (stats)
-                -- (see skill helper function documentation for details)
-                local base = skill.baseDamage(self, source, entity)
-
-                -- we can use perks here too
-                if perks["shrapnel"] then
-                    -- with 20% chance, add 10 "raw" damage
-                    if math.random() < 0.2 then
-                        base = base + 10
-                    end
+            -- can use perks inside perform function too
+            if not perks["consistency"] then
+                if random(10) == 1 then
+                    log(message.notify("But it failed!"))
+                    return -- quit early
                 end
-
-                -- actually deal damage
-                -- this is automatically rounded to the nearest whole number
-                entity:drainHP(mod * base)
             end
+
+            -- delegate to a different perform function
+            skill.default_perform(self, source, target)
         end
     }
 end

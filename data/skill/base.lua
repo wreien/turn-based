@@ -10,17 +10,13 @@ setmetatable(skill.list, skilllist_mt)
 -- the skill 's' with name 'name' can have a value 'value'; if so, it's type 'valtype'
 local function optional_value_type(s, name, value, valtype)
     local t = type(s[value])
-    if t ~= valtype and t ~= "nil" then
-        error("'" .. name .. "." .. value .. "' must be of type '" ..
-              valtype .. "'; got '" .. t .. "'.")
-    end
+    assert(t == valtype or t == "nil", "'" .. name .. "." .. value ..
+           "' must be of type '" .. valtype .. "'; got '" .. t .. "'.")
 end
 
 -- the skill 's' with name 'name' needs a value 'value' of type 'valtype'
 local function require_value_type(s, name, value, valtype)
-    if not s[value] then
-        error("'" .. name .. "' must provide '" .. value .. "'.")
-    end
+    assert(s[value], "'" .. name .. "' must provide '" .. value .. "'.")
     optional_value_type(s, name, value, valtype)
 end
 
@@ -41,16 +37,23 @@ end
 local function warn_fractional(s, name, value)
     local x = s[value]
     if x ~= nil then
-        local _, fractional = math.modf(s[value])
-        if fractional ~= 0 then
-            error("'" .. name .. '.' .. value .. "' should be a whole number.")
-        end
+        local _, frac = math.modf(s[value])
+        assert(frac == 0, "'" .. name .. '.' .. value .. "' should be a whole number.")
     end
 end
 
-local function make_read_only(func)
+local function prepare(func)
     return function(...)
+        -- get result
         local ret = func(...)
+
+        -- set default values
+        ret.max_level = ret.max_level or 1
+        ret.method = ret.method or method.none
+        ret.spread = ret.spread or spread.single
+        ret.element = ret.element or element.neutral
+
+        -- make read only and return it
         return setmetatable({}, {
             __index = ret,
             __newindex = function()
@@ -96,7 +99,7 @@ skilllist_mt.__newindex = function (table, key, value)
     warn_fractional(s, key, "accuracy")
 
     -- can't do a direct assignment here; we'll just call __newindex again!
-    rawset(table, key, make_read_only(value))
+    rawset(table, key, prepare(value))
 end
 
 
