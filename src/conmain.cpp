@@ -457,11 +457,9 @@ int main() {
         battle::TurnInfo info = system.doTurn();
         for (const auto& m : info.messages)
             printMessage(m);
-        std::cout << "\n";
-        if (info.need_user_input) {
+        if (info.need_user_input)
             handleUserChoice(*info.controller, system);
-            std::cout << "\n";
-        }
+        std::cout << "\n";
     }
 
     std::cout << "Game over! Come back next time!\n" << std::flush;
