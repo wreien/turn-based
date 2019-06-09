@@ -47,8 +47,8 @@ target_sources(${PROJECT_NAME} PRIVATE
     src/battle/stats.h
     src/battle/statuseffect.cpp
     src/battle/statuseffect.h
-    src/overload.h
-    src/random.h
+    src/util/overload.h
+    src/util/random.h
 )
 
 if(RENDERER STREQUAL "console")

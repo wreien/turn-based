@@ -3,7 +3,7 @@
 #include "battle/skill.h"
 #include "battle/skilldetails.h"
 #include "battle/stats.h"
-#include "random.h"
+#include "util/random.h"
 
 #include <type_traits>
 #include <cmath>
@@ -242,14 +242,14 @@ namespace {
 
             // create random functions using my generators for both reals and ints
             lua.set_function("random", sol::overload(
-                [] { return ::random(0.0, 1.0); },
-                [](long max) { return ::random(1, max); },
-                [](long min, long max) { return ::random(min, max); }
+                [] { return util::random(0.0, 1.0); },
+                [](long max) { return util::random(1, max); },
+                [](long min, long max) { return util::random(min, max); }
             ));
             lua.set_function("randf", sol::overload(
-                [] { return ::random(0.0, 1.0); },
-                [](double max) { return ::random(0.0, max); },
-                [](double min, double max) { return ::random(min, max); }
+                [] { return util::random(0.0, 1.0); },
+                [](double max) { return util::random(0.0, max); },
+                [](double min, double max) { return util::random(min, max); }
             ));
             // replace default random with my integer variant
             lua["math"]["random"] = lua["random"];

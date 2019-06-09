@@ -16,7 +16,7 @@
 #include "battle/entity.h"
 #include "battle/npccontroller.h"
 #include "battle/playercontroller.h"
-#include "overload.h"
+#include "util/overload.h"
 
 template <typename T, typename F>
 T getInput(F is_valid, std::string_view errormsg = "Invalid input!\n> ") {
@@ -391,7 +391,7 @@ void handleUserChoice(battle::PlayerController& controller,
 
 void printMessage(const battle::Message& m) {
     using namespace battle::message;
-    std::visit(overload{
+    std::visit(util::overload{
         [](const SkillUsed& su) {
             std::cout << su.source.getID().name << " used "
                       << su.skill->getDetails().getName() << " on "

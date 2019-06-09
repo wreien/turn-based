@@ -3,7 +3,7 @@
 #include "battle/battleview.h"
 #include "battle/entity.h"
 #include "battle/skilldetails.h"
-#include "random.h"
+#include "util/random.h"
 
 namespace battle {
 
@@ -15,10 +15,10 @@ NPCController::NPCController(Entity& entity)
 Action NPCController::go(const BattleView& view) {
     // TODO: improve the AI over just doing entirely random things
     const auto skills = entity.getSkills();
-    if (skills.empty() || random(1.0) < 0.2)
+    if (skills.empty() || util::random(1.0) < 0.2)
         return action::Defend{};
 
-    const auto& choice = random(skills);
+    const auto& choice = util::random(skills);
     const auto& details = choice->getDetails();
 
     switch (details.getSpread()) {
@@ -29,7 +29,7 @@ Action NPCController::go(const BattleView& view) {
     case SkillSpread::Single:
     case SkillSpread::SemiAoE:
     case SkillSpread::AoE:
-        return action::Skill{ choice, *random(view.enemies) };
+        return action::Skill{ choice, *util::random(view.enemies) };
     }
 
     // shouldn't ever get here; just shut up GCC
