@@ -7,13 +7,13 @@
 #include <locale>
 #include <memory>
 #include <numeric>
+#include <sstream>
 #include <string>
 #include <string_view>
 #include <unordered_map>
 
 #include "battle/battlesystem.h"
 #include "battle/entity.h"
-#include "battle/config.h"
 #include "battle/npccontroller.h"
 #include "battle/playercontroller.h"
 #include "overload.h"

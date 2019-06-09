@@ -1,8 +1,9 @@
-#include "npccontroller.h"
-#include "battleview.h"
-#include "entity.h"
-#include "skilldetails.h"
-#include "../random.h"
+#include "battle/npccontroller.h"
+
+#include "battle/battleview.h"
+#include "battle/entity.h"
+#include "battle/skilldetails.h"
+#include "random.h"
 
 namespace battle {
 
@@ -17,7 +18,7 @@ Action NPCController::go(const BattleView& view) {
     if (skills.empty() || random(1.0) < 0.2)
         return action::Defend{};
 
-    const auto choice = random(skills);
+    const auto& choice = random(skills);
     const auto& details = choice->getDetails();
 
     switch (details.getSpread()) {

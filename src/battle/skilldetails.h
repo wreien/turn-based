@@ -1,11 +1,11 @@
 #ifndef BATTLE_SKILLDETAILS_H_INCLUDED
 #define BATTLE_SKILLDETAILS_H_INCLUDED
 
-#include <string>
-#include <optional>
 #include <memory>
+#include <optional>
+#include <string>
 #include <vector>
-#include "element.h"
+#include "battle/element.h"
 
 namespace battle {
 

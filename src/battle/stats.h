@@ -3,7 +3,7 @@
 
 #include <array>
 #include <vector>
-#include "element.h"
+#include "battle/element.h"
 
 namespace battle {
 

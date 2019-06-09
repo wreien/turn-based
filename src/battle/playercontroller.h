@@ -1,10 +1,10 @@
 #ifndef BATTLE_PLAYERCONTROLLER_H_INCLUDED
 #define BATTLE_PLAYERCONTROLLER_H_INCLUDED
 
-#include <vector>
 #include <optional>
-#include "controller.h"
-#include "skillref.h"
+#include <vector>
+#include "battle/controller.h"
+#include "battle/skillref.h"
 
 namespace battle {
 

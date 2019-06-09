@@ -5,8 +5,8 @@
 #include <string>
 #include <variant>
 #include <vector>
-#include "skillref.h"
-#include "stats.h"
+#include "battle/skillref.h"
+#include "battle/stats.h"
 
 namespace battle {
 

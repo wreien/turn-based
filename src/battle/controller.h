@@ -2,7 +2,7 @@
 #define BATTLE_CONTROLLER_H_INCLUDED
 
 #include <vector>
-#include "action.h"
+#include "battle/action.h"
 
 namespace battle {
 

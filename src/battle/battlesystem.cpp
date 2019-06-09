@@ -1,10 +1,11 @@
-#include "battlesystem.h"
+#include "battle/battlesystem.h"
 
 #include <algorithm>
-#include "controller.h"
-#include "battleview.h"
-#include "entity.h"
-#include "../overload.h"
+
+#include "battle/battleview.h"
+#include "battle/controller.h"
+#include "battle/entity.h"
+#include "overload.h"
 
 namespace battle {
 

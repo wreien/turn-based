@@ -1,17 +1,16 @@
 #ifndef BATTLE_ENTITY_H_INCLUDED
 #define BATTLE_ENTITY_H_INCLUDED
 
+#include <memory>
+#include <optional>
 #include <string>
 #include <vector>
-#include <memory>
-#include <filesystem>
-#include <optional>
 
-#include "skill.h"
-#include "skillref.h"
-#include "stats.h"
-#include "statuseffect.h"
-#include "messages.h"
+#include "battle/messages.h"
+#include "battle/skill.h"
+#include "battle/skillref.h"
+#include "battle/stats.h"
+#include "battle/statuseffect.h"
 
 namespace battle {
 

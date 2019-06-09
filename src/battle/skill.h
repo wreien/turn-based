@@ -1,10 +1,10 @@
 #ifndef BATTLE_SKILL_H_INCLUDED
 #define BATTLE_SKILL_H_INCLUDED
 
+#include <memory>
 #include <string>
 #include <vector>
-#include <memory>
-#include "skilldetails.h"
+#include "battle/skilldetails.h"
 
 namespace battle {
 

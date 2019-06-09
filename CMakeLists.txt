@@ -21,6 +21,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
     CXX_EXTENSIONS NO
 )
 
+target_include_directories(${PROJECT_NAME} PRIVATE src)
 target_include_directories(${PROJECT_NAME} SYSTEM PRIVATE third_party/include)
 
 target_sources(${PROJECT_NAME} PRIVATE
@@ -29,7 +30,6 @@ target_sources(${PROJECT_NAME} PRIVATE
     src/battle/battlesystem.h
     src/battle/battleview.h
     src/battle/config.cpp
-    src/battle/config.h
     src/battle/controller.h
     src/battle/element.h
     src/battle/entity.cpp

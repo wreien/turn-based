@@ -1,6 +1,7 @@
-#include "playercontroller.h"
-#include "entity.h"
+#include "battle/playercontroller.h"
+
 #include <algorithm>
+#include "battle/entity.h"
 
 namespace battle {
 

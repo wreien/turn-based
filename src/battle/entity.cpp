@@ -1,9 +1,9 @@
-#include "entity.h"
-#include "controller.h"
-#include "messages.h"
-#include "config.h"
-#include <iterator>
+#include "battle/entity.h"
+
 #include <algorithm>
+#include <iterator>
+#include "battle/controller.h"
+#include "battle/messages.h"
 
 
 namespace battle {

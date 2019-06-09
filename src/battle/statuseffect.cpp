@@ -1,4 +1,4 @@
-#include "statuseffect.h"
+#include "battle/statuseffect.h"
 
 
 namespace battle {

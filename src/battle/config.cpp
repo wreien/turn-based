@@ -1,10 +1,9 @@
-#include "config.h"
-#include "skilldetails.h"
-#include "skill.h"
-#include "entity.h"
-#include "stats.h"
-#include "battlesystem.h"
-#include "../random.h"
+#include "battle/battlesystem.h"
+#include "battle/entity.h"
+#include "battle/skill.h"
+#include "battle/skilldetails.h"
+#include "battle/stats.h"
+#include "random.h"
 
 #include <type_traits>
 #include <cmath>
@@ -303,54 +302,6 @@ namespace {
     [[nodiscard]] auto set_log(Fn&& fn) {
         return ScopedLogger(std::forward<Fn>(fn));
     }
-}
-
-// Entity configuration
-namespace battle {
-
-    std::tuple<Stats, std::vector<Skill>>
-    getEntityDetails(const std::string& kind, const std::string& type, int level) {
-        // TODO actually lua this
-        // TODO even if not, can't wait for designated initializers (C++20)
-        std::vector<Skill> skills;
-        if (kind == "default" && type == "good") {
-            Stats stats{
-                27 * level,    // hp
-                4 + level,     // mp
-                10 + level,    // tech
-                3 + level,     // p_atk
-                4 + level / 2, // p_def
-                2 + level / 2, // m_atk
-                2 + level,     // m_def
-                100,           // skill
-                0,             // evade
-                4 + level,     // speed
-                { 0 },         // resist
-            };
-            skills.emplace_back("attack");
-
-            return std::make_tuple(stats, std::move(skills));
-        } else if (kind == "default" && type == "evil") {
-            Stats stats{
-                24 * level,    // hp
-                4 + level,     // mp
-                10 + level,    // tech
-                3 + level / 2, // p_atk
-                5 + level,     // p_def
-                4 + level,     // m_atk
-                2 + level / 2, // m_def
-                80,            // skill
-                20,            // evade
-                6 + level,     // speed
-                { 0 },         // resist
-            };
-            skills.emplace_back("attack");
-
-            return std::make_tuple(stats, std::move(skills));
-        }
-        throw std::invalid_argument(kind + ":" + type + " is not a real entity type");
-    }
-
 }
 
 // SkillDetails implementation

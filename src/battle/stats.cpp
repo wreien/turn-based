@@ -1,4 +1,4 @@
-#include "stats.h"
+#include "battle/stats.h"
 #include <cmath>
 
 namespace battle {

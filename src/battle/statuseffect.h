@@ -1,11 +1,11 @@
 #ifndef BATTLE_STATUSEFFECT_H_INCLUDED
 #define BATTLE_STATUSEFFECT_H_INCLUDED
 
-#include "stats.h"
-#include <vector>
 #include <optional>
 #include <string>
 #include <string_view>
+#include <vector>
+#include "battle/stats.h"
 
 namespace battle {
 
