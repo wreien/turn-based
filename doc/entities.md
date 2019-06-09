@@ -43,9 +43,9 @@ attributes:
 
   Attribute | Type   | Description
   ----------|--------|------------------------------------------------
-  `kind`    | string | The "kind" of entity (e.g. cat)
-  `type`    | string | The "type" of entity (e.g. blitz hyena)
-  `name`    | string | The identifying name of the entity (e.g. blitz hyena #2)
+  `kind`      | string | The "kind" of entity (e.g. cat)
+  `type`      | string | The "type" of entity (e.g. blitz hyena)
+  `name`      | string | The identifying name of the entity (e.g. blitz hyena #2)
 
 ## Data
 
@@ -53,13 +53,15 @@ Some other details about entities, ranked in approximate order of usefulness:
 
   Attribute    | Type   | Description
   -------------|--------|-----------------------------------------------
-  `stats`      | stats  | The entity's stat block; see below for details
-  `is_dead`    | bool   | Whether the entity is dead or not
-  `hp`         | number | The entity's current HP
-  `mp`         | number | The entity's current MP
-  `tech`       | number | The entity's current Tech
-  `level`      | number | What level the entity is (e.g. 5); integer
-  `experience` | number | Current experience/experience granted on death
+  `stats`        | stats  | The entity's stat block; see below for details
+  `is_dead`      | bool   | Whether the entity is dead or not
+  `hp`           | number | The entity's current HP
+  `mp`           | number | The entity's current MP
+  `tech`         | number | The entity's current Tech
+  `level`        | number | What level the entity is (e.g. 5); integer
+  `experience`   | number | Current experience/experience granted on death
+
+All numbers are integers.
 
 Most are fairly self-explanatory. The `experience` attribute should almost
 never be useful; for players, it gives the experience they need to reach the
@@ -91,16 +93,16 @@ The attributes for stats are:
 
   Attribute  | Type   | Description
   -----------|--------|------------------------------------------------------
-  `max_hp`   | number | The entity's maximum HP
-  `max_mp`   | number | The entity's maximum MP
-  `max_tech` | number | The entity's maximum Tech
-  `p_atk`    | number | The entity's physical attack power
-  `p_def`    | number | The entity's physical defensive strength
-  `m_atk`    | number | The entity's magical attack power
-  `m_def`    | number | The entity's magical defensive strength
-  `skill`    | number | The entity's accuracy modifier (increase hit chance)
-  `evade`    | number | The entity's evasion modifier (decrease hit chance)
-  `speed`    | number | Determines the entity's placing in the turn order.
+  `max_hp`     | number | The entity's maximum HP
+  `max_mp`     | number | The entity's maximum MP
+  `max_tech`   | number | The entity's maximum Tech
+  `p_atk`      | number | The entity's physical attack power
+  `p_def`      | number | The entity's physical defensive strength
+  `m_atk`      | number | The entity's magical attack power
+  `m_def`      | number | The entity's magical defensive strength
+  `skill`      | number | The entity's accuracy modifier (increase hit chance)
+  `evade`      | number | The entity's evasion modifier (decrease hit chance)
+  `speed`      | number | Determines the entity's placing in the turn order.
 
 All number are integers.
 
@@ -112,7 +114,7 @@ Determine the entity's resistance to the given element.
 
   Parameter | Type      | Description
   ----------|-----------|--------------------------------------------
-  `elem`    | `element` | The element to retrieve resistance for
+  `elem`      | `element` | The element to retrieve resistance for
 
 Returns the entity's resistance to the parameter `elem` as a percentage. For
 example, an entity `e` with 20% Fire resistance would succeed the following
@@ -122,7 +124,7 @@ assertion:
 assert(e.stats:resists(element.fire) == 20)
 ```
 
-This may be converted for use in a modifer by the equation `mod = resist / 100 + 1`.
+This may be converted for use in a modifer by the equation `mod = -resist / 100 + 1`.
 
 ## Functionality
 
@@ -133,19 +135,20 @@ these can be done to both the source and target entities.
 
 All pool modifier functions have the same signature: they take one number,
 which is the value to modify the pool by, and don't return anything. The
-following functions are available:
+following functions are available (where `amt` is a number):
 
-  Function      | Description
-  --------------|--------------------------------------------------
-  `drainHP`     | Damage the entity's health by the given amount
-  `drainMP`     | Damage the entity's mana by the given amount
-  `drainTech`   | Damage the entity's tech by the given amount
-  `restoreHP`   | Heal the entity's health by the given amount
-  `restoreMP`   | Heal the entity's mana by the given amount
-  `restoreTech` | Heal the entity's tech by the given amount
+  Function         | Description
+  -----------------|--------------------------------------------------
+  `drainHP(amt)`     | Damage the entity's health by the given amount
+  `drainMP(amt)`     | Damage the entity's mana by the given amount
+  `drainTech(amt)`   | Damage the entity's tech by the given amount
+  `restoreHP(amt)`   | Heal the entity's health by the given amount
+  `restoreMP(amt)`   | Heal the entity's mana by the given amount
+  `restoreTech(amt)` | Heal the entity's tech by the given amount
 
-Values are clamped to positive values, that is `entity:drainHP(-10)` has the
-same effect as `entity:drainHP(0)`.
+Values are clamped to positive values; for example, `entity:drainHP(-10)` has
+the same effect as `entity:drainHP(0)`. Moreover, floating point values are
+rounded; `entity:drainHP(3.56)` has the same effect as `entity:drainHP(4.21)`.
 
 ### `getTeam`
 

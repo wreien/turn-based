@@ -162,7 +162,7 @@ only calculated values you might ever need are `level` and `perks`, which are
 as described [above](#representation).
 
 For details on the API for `source` and `target`, please see [the entity
-documentation](entity.md).
+documentation](entities.md).
 
 While developing, a useful placeholder `perform` function is
 `skill.default_perform`, which guesses a standard implementation based upon
@@ -199,7 +199,7 @@ skill.list["Eruption"] = function(level, perks)
         -- for niceness, we'll split the long description over multiple lines
         desc = "Unleash a volcanic eruption at a target, "
             .. "damaging their whole team.",
-        maxlevel = 5,
+        max_level = 5,
 
         -- we leave out hp_cost here as it's not relevant
         mp_cost = 30,
