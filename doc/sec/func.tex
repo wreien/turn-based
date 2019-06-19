@@ -1,0 +1,178 @@
+\chapter{Helper Functions}
+\label{ch:func}
+
+These are extra functions that are made available for use
+within user-facing Lua code.
+Note that standard-library functions from |base| and |math| are also available.
+
+The notation used here is of the form |func(arg1, arg2[, optional])|,
+to represent a function |func|
+which takes two mandatory arguments |arg1| and |arg2|
+and one optional argument |optional|.
+
+\section{General}
+\label{sec:func_general}
+
+\subsection{\lstinline{random([m [, n]])}}
+\label{sec:func_general_random}
+
+When called without arguments,
+returns a uniformly distributed floating point value between 0 and 1.
+When called with two integers |m| and |n|,
+returns a uniformly-distributed integer in the range |[m, n]|.
+A call to |random(n)| is equivalent to a call to |random(1, n)|.
+
+This function is identical to |math.random|, but is here for consistency.
+
+\subsection{\lstinline{randf([m [, n]])}}
+\label{sec:func_general_randf}
+
+Functions the same as |random| but for floating point values.
+When called with two floating-point values |m| and |n|,
+returns a uniformly distributed floating point value in the range \lstinline{[m, n)}.
+A call to |randf(n)| is equivalent to a call to |randf(0.0, n)|,
+and a call to |randf()| is equivalent to a call to |randf(0.0, 1.0)|.
+
+\subsection{\lstinline{log(message)}}
+
+Logs the message |message| to the process log for the turn.
+This call is only valid when inside a context where logging makes sense,
+such as in a skill's \hyperref[sec:skill_func]{\lstinline|perform| function}
+(see \autoref{sec:skill_func}).
+
+There are currently three sorts of messages that can be sent;
+see \autoref{tbl:messages} for details. An example usage of this function is:
+\begin{lstlisting}
+    -- display an important message to the player; note the use of the ``..'' operator
+    log(message.notify("IMPORTANT! 5 + 3 = " .. (5 + 3)))
+\end{lstlisting}
+
+\begin{apidoc}[Message types][tbl:messages]{ll}
+    \thead{Function} & \thead{Description} \\
+    \midrule
+    |message.miss(entity)| & The current \hyperref[ch:skill]{skill} missed
+        the specified \hyperref[ch:entities]{entity} \\
+    |message.critical(entity)| & The current \hyperref[ch:skill]{skill} critically hit
+        the specified \hyperref[ch:entities]{entity} \\
+    |message.notify(string)| & Display the given |string| to the user in some manner \\
+    \todo{Plain \lstinline{string} arguments as debugging aids ---
+        or maybe another function \lstinline|message.debug(string)|?}
+\end{apidoc}
+
+The |message.notify| message type can also be useful for debugging.
+
+\section{Skills}
+\label{sec:func_skill}
+
+Many of these functions take similar parameters.
+See \autoref{tbl:func_skill_params} for an overview of the common parameters,
+including their types and their description. If a parameter isn't listed there
+it should be mentioned in the description of the particular function.
+
+\begin{apidoc}[Standard skill function parameters][tbl:func_skill_params]{lll}
+    \thead{Parameter} & \thead{Type} & \thead{Description} \\
+    \midrule
+    |s| & \hyperref[ch:skill]{skill} & The skill being used \\
+    |source| & \hyperref[ch:entities]{entity} & The entity using the skill \\
+    |target| & \hyperref[ch:entities]{entity} & The entity the skill is being used on \\
+    |entity| & \hyperref[ch:entities]{entity} & A generic entity \\
+\end{apidoc}
+
+\subsection{\lstinline{skill.did_hit(s, source, target [, crit_difficulty])}}
+\label{sec:func_skill_didhit}
+
+Determines if a given skill managed to hit the target.
+Apart from the usual parameters, described in \autoref{tbl:func_skill_params},
+this function takes an optional parameter |crit_difficulty|,
+which determines the difficulty of scoring a critical hit.
+If not provided it defaults to 6.
+
+This function will return one of three values:
+\begin{itemize}[noitemsep]
+    \item \textbf{0} $\implies$ The skill missed
+    \item \textbf{1} $\implies$ The skill hit normally
+    \item \textbf{2} $\implies$ The skill scored a critical hit
+\end{itemize}
+\todo{Return named enumerators?}
+
+The function first tests as it hits at all, as a function of
+the skill's |accuracy|, the source's |skill|, and the target's |evade|.
+(See \autoref{tbl:skill_attrs} and \autoref{tbl:entity_stats}).
+The probability of scoring a hit is
+(where $P(x)$ returns true with probability $x\%$)
+\[ P\left(\texttt{accuracy} + \texttt{skill} - \texttt{evade}\right) \]
+If the skill hits, it then does another check,
+which succeeds with chance
+\[ P\left(\frac
+    {\texttt{accuracy} + \texttt{skill} - \texttt{evade}}
+    {\texttt{crit\_difficulty}}\right) \]
+to determine if a critical hit was scored.
+
+For example, if the skill's base accuracy is 85,
+the source's skill is 10, and the target's evade is 5,
+then the chance of scoring a hit is 90\%.
+Assuming it hit, if \texttt{crit\_difficulty} is 6 (the default)
+the chance of scoring a critical hit is 15\%.
+As such, the overall chance of a critical hit in this situation is
+$15\%\times 90\% = 13.5\%$.
+
+\note{Is the default difficulty of critting too low or too high?}
+\todo{\lstinline|skill| in this context is confusing; either find a better name for
+    entity stats or rename the other kind of skill as \lstinline|action| or something.}
+
+\subsection{\lstinline{skill.raw_damage(s, source, target)}}
+\label{sec:func_skill_rawdamage}
+
+Calculates the raw damage of a skill,
+without taking into account modifiers,
+thoguh it does account for status effects and traits.
+For a description of the parameters, please see \autoref{tbl:func_skill_params}.
+
+The function returns a positive floating point number
+representing the base damage dealt. The damage is roughly calculated as
+\[ \frac{\texttt{power}}{100}\times(4\times\texttt{attack} - 2\times\texttt{defense}) \]
+but with some random jitter applied and clamped to positive values.
+
+Note that the function takes into account the skill's
+\hyperref[tbl:opt_method_spread]{method},
+choosing the stats used for |attack| and |defense| appropriately.
+It should not be used for skills with methods of |method.none| or |method.mixed|.
+
+\subsection{\lstinline{skill.resistance(s, entity)}}
+\label{sec:func_skill_resistance}
+
+Calculates the resistance modifier for an entity for the given skill.
+At this stage, the function only take into account
+\hyperref[ch:elements]{elemental resistances}.
+The parameters taken are described in \autoref{tbl:func_skill_params}.
+
+The function returns a multiplier representing the resistance.
+For example, a Fire element skill being used on
+an entity with 20\% Fire resistance would return |0.8|.
+
+\todo{Should this function take both \lstinline|source| and \lstinline|target|?}
+
+\subsection{\lstinline{skill.default_perform(s, source, target)}}
+\label{sec:func_skill_defaultperform}
+
+Implements a generic |perform| function for skills.
+It can be used to stamp out basic attacking skills with no other real forethought.
+It has the same signature as the
+\hyperref[sec:skill_func]{\lstinline|perform| function attribute}
+required to define a skill, so it can be used like:
+\begin{lstlisting}
+    return {
+        desc = "an example skill",
+        -- \ldots other attributes
+
+        perform = skill.default_perform
+    }
+\end{lstlisting}
+
+The function, when called, will deal damage
+according to the parameters for skills as described in \autoref{ch:skill}.
+It doesn't, however, have any capabilities for perk- or level-specific modifications.
+
+Note that this function can also be used as
+a wrapped fallback for a skill where appropriate.
+See \autoref{sec:skill_example} for an example of this.

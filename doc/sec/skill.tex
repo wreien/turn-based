@@ -1,0 +1,252 @@
+\chapter{Skills}
+\label{ch:skill}
+
+Skills represent things that can be done in a battle.
+They are specified in Lua, and consist of
+a list of key-value pairs defining their functionality.
+The owner of a skill isn't necessarily an entity;
+for example, skills can belong to:
+\begin{itemize}[noitemsep]
+    \item the entity, for learnt skills
+    \item a ``stance'', for skills usable only in a particular form
+    \item a consumable, for the effect of an item
+    \item a piece of equipment, as a skill granted while wearing it
+    \item a buff, e.g.\ the second stage of a ``charge up $\rightarrow$ attack'' skill
+\end{itemize}
+
+\section{Representation}
+\label{sec:skill_representation}
+
+To specify a skill, declare a function
+taking \texttt{level} and \texttt{perks} as follows:
+\begin{lstlisting}
+    require "skill.base"
+
+    skill.list["Name of Skill"] = function(level, perks)
+        return {
+            -- skill definition here; see below for details
+        }
+    end
+\end{lstlisting}
+
+Obviously, |"Name of Skill"| should be unique;
+if the same skill is defined twice, the latter construction has priority.
+
+The information passed in is as follows:
+
+\begin{itemize}
+    \item |level| represents the skill level to construct the skill at.
+        It must be a value between |1| and |skill.max_level| inclusive.
+
+    \item |perks| is a set of perks to be applied.
+        You can test for the existance of a particular perk with:
+\begin{lstlisting}
+    if perks["power boost"] then
+        -- do something
+    end
+\end{lstlisting}
+\end{itemize}
+
+You should return a list of key-value pairs representing
+the data and functionality of the skill.
+
+\section{Data}
+\label{sec:skill_data}
+
+Data is used both internally within the skill to ``do things'',
+as well as within the calling C++ code to generate
+metainfo and descriptions for a skill.
+When creating a skill, some code is run
+to error-check a level 1 instance of the new skill
+to make sure that all the preconditions of the data is fulfilled.
+
+\subsection{Informational}
+\label{sec:skill_info}
+
+This is the various bookkeeping required for the skill.
+The attribute |desc| is required, but |max_level| can be default to |1|.
+Other information may appear here in the future,
+for example categorising skill types in the UI or linking to animation data.
+
+\begin{apidoc}[Skill bookkeeping information][tbl:skill_info]{lll}
+    \thead{Attribute} & \thead{Type} & \thead{Description} \\
+    \midrule
+    |desc| & string & An english description for the skill's effect \\
+    |max_level| & number & The maximum level the skill can reach; default |1| \\
+    \todo{Should we add a descriptor \lstinline|name| or something?}
+\end{apidoc}
+
+Note that |max_level| should be an integer (whole number) ---
+that is, it cannot be a fractional value.
+
+\subsection{Costs}
+\label{sec:skill_costs}
+
+Attributes used to check if the skill is castable,
+and what the skill will cost the user.
+All of these fields may be, and default to, |nil|,
+representing no cost of that kind.
+
+\begin{apidoc}[Skill costs][tbl:skill_costs]{lll}
+    \thead{Attribute} & \thead{Type} & \thead{Description} \\
+    \midrule
+    |hp_cost|   & number & The amount of HP required to cast the skill \\
+    |mp_cost|   & number & The amount of MP required to cast the skill \\
+    |tech_cost| & number & The amount of Tech required to cast the skill \\
+    |items|     & list & Any other components required to cast the skill \\
+    \unimplemented{items}
+\end{apidoc}
+
+
+Apart from |items|, all cost values must be integers (whole numbers);
+you may make use of the ``flooring'' division operator |//| to ensure this
+(or otherwise use |math.floor(number)|)
+if there is a possibility of creating fractional numbers
+to forcefully round down to the nearest whole number.
+
+On the other hand, |items| is a list of items required to cast the skill,
+specified as strings representing the name of the item;
+specify the same item multiple times as necessary, as in:
+\begin{lstlisting}
+    -- require two herbs and a flower to cast the skill
+    items = { "herb", "herb", "flower" }
+\end{lstlisting}
+
+\subsection{Attributes}
+\label{sec:skill_attrs}
+
+There are a variety of other attributes required to specify
+the high-level behaviour of the skill.
+Unless otherwise specified, these default to |nil|, a ``not applicable'' value.
+For example, a skill to poison an enemy would have |power = nil|,
+since it has no ``power'' \emph{per se},
+and could thus leave it out.
+However, said skill should still specify |accuracy = 100| (unless it can't miss).
+
+\begin{apidoc}[General skill attributes][tbl:skill_attrs]{lll}
+    \thead{Attribute} & \thead{Type} & \thead{Description} \\
+    \midrule
+    |power| & number & The base damage for the skill \\
+    |accuracy| & number & The base percentage chance for the skill to hit \\
+    |method| & \hyperref[tbl:opt_method_spread]{method}
+             & What stats of the source it uses; default |method.none| \\
+    |spread| & \hyperref[tbl:opt_method_spread]{spread}
+             & Who the skill targets; default |spread.single| \\
+    |element| & \hyperref[ch:elements]{element}
+              & What element the skill is; default |element.neutral| \\
+\end{apidoc}
+\begin{apidoc}[Options for method and spread][tbl:opt_method_spread]{ll}
+    \todo{Probably the attribute names and type names should be different in some way;
+    maybe some kind of namespace for the types?}
+    \thead{Value}     & \thead{Description} \\
+    \midrule
+    |method.physical| & Deals primarily physical damage (uses |p_atk| and |p_def|) \\
+    |method.magical|  & Deals primarily magical damage (uses |m_atk| and |m_def|) \\
+    |method.mixed|    & Deals damage that's neither primarily physical nor magical \\
+    |method.none|     & Doesn't deal direct damage \\
+    \midrule
+    |spread.self|     & Can only target the skill user, i.e.\ source = target \\
+    |spread.single|   & Targets any one entity \\
+    |spread.aoe|      & Targets an entire team equally \\
+    |spread.semiaoe|  & Targets an entire team, but focusses on an individual \\
+    |spread.field|    & Targets the entire battlefield \\
+    \unimplemented{spread.field}
+\end{apidoc}
+
+Like with the \hyperref[tbl:skill_costs]{costs},
+|power| and |accuracy| should be integers.
+Additionally, an |element| is any one of the available elements.
+See \autoref{ch:elements} for more details.
+
+\section{Functionality}
+\label{sec:skill_func}
+
+To define exactly what the skill does, an attribute |perform| must be provided.
+This is a function taking three parameters:
+\begin{itemize}[noitemsep]
+    \item |self| (or |s|): me, the skill using the function (and its details)
+    \item |source|: whomever used the skill in the first place
+    \item |target|: the entity the skill targeted (or |nil| if |spread.field|)
+\end{itemize}
+
+(See also \autoref{tbl:func_skill_params}.)
+
+The parameter |self| (or |s|) contains
+all the data specified in the skill you returned;
+see \autoref{sec:skill_data} for details.
+For example, if you returned a skill with 80 power, then |self.power| is 80.
+Prefer to use this value rather than recalculating the desired attributes.
+The only calculated values you might ever need are |level| and |perks|,
+as described in \autoref{sec:skill_representation}.
+
+The parameters |source| and (if it exists) |target| are \hyperref[ch:entities]{entities}.
+They are described in detail in \autoref{ch:entities}.
+
+While developing, a useful placeholder for the |perform| attribute's function is
+|skill.default_perform|, which guesses a standard implementation
+based upon the skill's other attributes.
+See \hyperref[ch:func]{the helper function documentation}
+(\autoref{ch:func}) for more details.
+
+\section{Example}
+\label{sec:skill_example}
+
+Here is a detailed example of a skill,
+demonstrating usage of most of the attributes described above.
+
+\begin{lstlisting}
+    -- we define a skill named "Eruption"
+    skill.list["Eruption"] = function(level, perks)
+        -- we set up some defaults
+        local power = 50 + 15 * level
+        local accuracy = 80
+        -- we call it newspread rather than spread
+        -- so we can still access the global enum ``spread'' later
+        local newspread = spread.semiaoe
+
+        -- we manage our perks
+        if perks["overheat"] then
+            -- make sure we end up with a whole number!
+            power = math.floor(power * 1.2)
+            accuracy = accuracy - 10
+        end
+        if perks["even spread"] then
+            newspread = spread.aoe
+        end
+
+        -- now we actually provide the data for our skill
+        return {
+            -- for niceness, we can split the long description over multiple lines
+            desc = "Unleash a volcanic eruption at a target, "
+                .. "damaging their whole team.",
+            max_level = 5,
+
+            -- we leave out \texttt{hp\_cost} here as it's not relevant
+            mp_cost = 30,
+            tech_cost = 10,
+            -- we need two fire stones to use the skill
+            items = { "fire stone", "fire stone" },
+
+            -- pass in our calculated values
+            power = power,
+            accuracy = accuracy,
+            spread = newspread,
+            method = method.magical,
+            element = element.fire,
+
+            -- provide a default function to actually do things
+            perform = function(self, source, target)
+                -- we can use perks inside the perform function, too
+                if not perks["consistency"] then
+                    if random(10) == 1 then
+                        log(message.notify("But it failed!"))
+                        return -- quit early
+                    end
+                end
+
+                -- delegate to a different perform function
+                skill.default_perform(self, source, target)
+            end
+        }
+    end
+\end{lstlisting}

@@ -1,0 +1,151 @@
+\documentclass[a4paper,11pt,extrafontsizes,openany,oneside]{memoir}
+\usepackage[utf8]{inputenc}
+\usepackage[australian]{babel}
+\usepackage{palatino}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{listings}
+\usepackage{listingsutf8}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage[hyperref,usenames,svgnames,table]{xcolor}
+\usepackage{tcolorbox}
+\usepackage{float}
+\usepackage{calc}
+\usepackage{xparse}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{hyperref}
+
+% \selectcolormodel{natural}
+\tcbuselibrary{skins,breakable,listings,listingsutf8}
+
+\hypersetup{
+    colorlinks,
+    linkcolor=cyan,
+    bookmarksnumbered=true,
+    pdftitle=User Documentation,
+    pdfpagelayout=TwoColumnRight}
+\urlstyle{same}
+
+\chapterstyle{tandh}
+\pagestyle{ruled}
+\setsecnumdepth{section}
+\makeoddfoot{plain}{}{}{\thepage}
+\makeoddhead{ruled}{}{}{\leftmark}
+
+\makeindex
+
+\nonzeroparskip
+\setlength\parindent{0pt}
+
+\captionnamefont{\small\itshape}
+\captiontitlefont{\small\itshape}
+
+\lstdefinelanguage{LuaConfig}[5.3]{Lua}{%
+    deletekeywords=[2]{type,string},%
+    morekeywords=[2]{%
+        log,message.notify,message.miss,message.critical,%
+        random,randf}%
+}[keywords,comments,strings]
+
+\lstset{
+    language=LuaConfig,
+    basicstyle=\small\ttfamily,
+    keywordstyle=\color{blue}\bfseries,
+    keywordstyle=[2]\color{blue!40!red!80}\bfseries,
+    commentstyle=\color{black!66}\rmfamily\itshape, texcl,
+    stringstyle=\color{red},
+    showstringspaces=false,
+    keepspaces=false,
+    breaklines=true,
+    numbers=none,
+    numberstyle=\color{gray},
+    gobble=4,
+    upquote=true,
+    tabsize=4,
+    aboveskip=0pt,
+    belowskip=0pt,
+    % frame=l,
+    % rulecolor=\color{gray},
+    % backgroundcolor=\color{gray!10},
+    % columns=fullflexible,
+}
+\lstMakeShortInline[basicstyle=\ttfamily]{|}
+\newcommand\thead[1]{\textbf{#1}}
+
+\newtcolorbox{danger}{colback=red!5!white,colframe=red!75!black}
+\tcolorboxenvironment{lstlisting}{
+    blanker, left=1em, breakable,
+    before skip=\baselineskip, after skip=\baselineskip,
+    borderline west={2pt}{0pt}{gray!75}
+}
+
+\makeatletter
+\newcommand\apidoc@post\@empty
+\newcommand\apidoc@in\BooleanFalse
+\NewDocumentEnvironment{apidoc}{ooms}{%
+    \renewcommand\apidoc@post\@empty
+    \renewcommand\apidoc@in\BooleanTrue
+    \IfBooleanTF{#4}{\begin{table}}{\begin{table}[H]}
+        \centering
+        \footnotesize
+        \IfNoValueF{#1}{\caption{#1}}
+        \IfNoValueF{#2}{\label{#2}}
+        \begin{tabular}{#3}\toprule
+}{%
+        \bottomrule\end{tabular}
+    \apidoc@post
+    \renewcommand\apidoc@post\@empty
+    \renewcommand\apidoc@in\BooleanFalse
+\end{table}}
+
+\newcommand\apidoc@note[1]{\begin{danger}\textbf{NOTE: }#1\end{danger}}
+\newcommand\apidoc@todo[1]{\begin{danger}\textbf{TODO: }#1\end{danger}}
+
+% add negative value of \footnotesize\the\baselineskip
+% to remove spurious row from table (XXX this is such a hack!)
+\newcommand\apidoc@addifin[1]{\IfBooleanTF{\apidoc@in}%
+    {\g@addto@macro\apidoc@post{\medskip #1}\\[-11.0pt]}{#1}}
+
+\newcommand\note[1]{\apidoc@addifin{\apidoc@note{#1}}}
+\newcommand\todo[1]{\apidoc@addifin{\apidoc@todo{#1}}}
+\makeatother
+
+\newcommand\unimplemented[1]{\note{%
+    ``\lstinline|#1|'' has not yet been implemented.}}
+
+\begin{document}
+
+\frontmatter
+
+\begin{titlingpage}
+    \begin{center}
+        \vspace*{50pt}
+
+        {\HUGE\ttfamily turn-based\\[\baselineskip]}
+        {\huge User Documentation}
+
+        \vfill
+
+        {\Large Last modified on\ \today\ at\ \printtime}
+    \end{center}
+\end{titlingpage}
+
+\clearpage
+\setcounter{tocdepth}{1}%
+\tableofcontents
+
+\clearpage
+\listoftables
+
+\mainmatter
+\include{sec/skill}
+\include{sec/element}
+\include{sec/entity}
+\include{sec/func}
+
+\backmatter
+\printindex
+
+\end{document}

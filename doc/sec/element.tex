@@ -1,0 +1,88 @@
+\chapter{Elements}
+\label{ch:elements}
+\todo{Talk about ``affinities'' rather than ``resistances''?}
+
+Elements participate in calculating resistances between skills and entities.
+Elements also have status effects associated with them,
+and generally entities of a particular element have common strengths or weaknesses.
+(Not always, however!)
+
+\todo{Actually implement status effects, and nut out for sure what status
+effects are associated with what elements.}
+\todo{Work out what elements have what strenghts and weaknesses.}
+
+There are three classes of elements:
+\begin{itemize}
+    \item \hyperref[sec:element_neutral]{neutral}: the default element, |element.neutral|,
+        which encompasses everything that otherwise doesn't belong in an element
+    \item \hyperref[sec:element_primary]{primary}: the building block elements
+    \item \hyperref[sec:element_secondary]{secondary}: specialised elements,
+        these are composed from combinations of primary elements
+        and sharing their effects to a degree
+\end{itemize}
+
+For an element named |X|,
+we can spell that element in our configuration files as ``|element.X|''.
+
+\section{Neutral}
+\label{sec:element_neutral}
+
+The neutral element, spelt |element.neutral|,
+is the catch-all for anything that doesn't have an element.
+For example, basica attacks often have no element.
+It's also the element for many status effects,
+unless they are explicitly associated with a different element;
+for example, Sleep would be a neutral element.
+\note{Status effects have not yet been implemented.}
+
+It is possible to grant resistance to the neutral element for entities,
+but it isn't recommended unless careful thought is given due to balance issues.
+There are no particular attributes in common for entities with neutral element.
+
+\section{Primary}
+\label{sec:element_primary}
+
+The primary elements are the building blocks for elemental affinities.
+They correspond to the four classical elements
+as well as the two ``moral'' elements, Light and Dark.
+
+\begin{apidoc}[Primary elements][tbl:element_primary]{ll}
+    \thead{Element} & \thead{Spelling} \\
+    \midrule
+    Fire  & |element.fire| \\
+    Water & |element.water| \\
+    Earth & |element.earth| \\
+    Air   & |element.air| \\
+    Light & |element.light| \\
+    Dark  & |element.dark| \\
+    \todo{Include associated status effects or associated stat changes in this table}
+\end{apidoc}
+
+\section{Secondary}
+\label{sec:element_secondary}
+
+These elements are formed from combinations of
+\hyperref[sec:element_primary]{primary elements}.
+At the moment no secondary is constituted by one of the moral elements, however.
+
+Resistances for secondary elements are calculated in an interesting fashion.
+Entities can have specific affinities to a secondary element,
+and this affects their resistance to that element.
+However, their resistances to the constituent primary elements are also considered.
+For example, an entity's resistance for Ice is calculated based upon
+not only their Ice resistance, but also their Water and Air resistances.
+\todo{What is the exact formula?}
+
+\begin{apidoc}[Secondary elements][tbl:element_secondary]{lll}
+    \thead{Element} & \thead{Spelling} & \thead{Constituents} \\
+    \midrule
+    Ice       & |element.ice|       & Air, Water \\
+    Lightning & |element.lightning| & Air, Fire \\
+    Steam     & |element.steam|     & Fire, Water \\
+    Life      & |element.life|      & Earth, Water \\
+    Metal     & |element.metal|     & Earth, Fire \\
+    Dust      & |element.sand|      & Air, Earth \\
+    \todo{Finalise what we call the Dust element,
+          and update \lstinline|element.sand| to match.}
+    \todo{Include relevant status effects}
+\end{apidoc}
