@@ -37,7 +37,7 @@ and a call to |randf()| is equivalent to a call to |randf(0.0, 1.0)|.
 
 Logs the message |message| to the process log for the turn.
 This call is only valid when inside a context where logging makes sense,
-such as in a skill's \hyperref[sec:skill_func]{\lstinline|perform| function}
+such as in a skill's \hyperref[sec:skill_func]{\lstinline{perform} function}
 (see \autoref{sec:skill_func}).
 
 There are currently three sorts of messages that can be sent;
@@ -56,7 +56,7 @@ see \autoref{tbl:messages} for details. An example usage of this function is:
         the specified \hyperref[ch:entities]{entity} \\
     |message.notify(string)| & Display the given |string| to the user in some manner \\
     \todo{Plain \lstinline{string} arguments as debugging aids ---
-        or maybe another function \lstinline|message.debug(string)|?}
+        or maybe another function \lstinline{message.debug(string)}?}
 \end{apidoc}
 
 The |message.notify| message type can also be useful for debugging.
@@ -117,8 +117,8 @@ As such, the overall chance of a critical hit in this situation is
 $15\%\times 90\% = 13.5\%$.
 
 \note{Is the default difficulty of critting too low or too high?}
-\todo{\lstinline|skill| in this context is confusing; either find a better name for
-    entity stats or rename the other kind of skill as \lstinline|action| or something.}
+\todo{\lstinline{skill} in this context is confusing; either find a better name for
+    entity stats or rename the other kind of skill as \lstinline{action} or something.}
 
 \subsection{\lstinline{skill.raw_damage(s, source, target)}}
 \label{sec:func_skill_rawdamage}
@@ -150,7 +150,7 @@ The function returns a multiplier representing the resistance.
 For example, a Fire element skill being used on
 an entity with 20\% Fire resistance would return |0.8|.
 
-\todo{Should this function take both \lstinline|source| and \lstinline|target|?}
+\todo{Should this function take both \lstinline{source} and \lstinline{target}?}
 
 \subsection{\lstinline{skill.default_perform(s, source, target)}}
 \label{sec:func_skill_defaultperform}
@@ -158,7 +158,7 @@ an entity with 20\% Fire resistance would return |0.8|.
 Implements a generic |perform| function for skills.
 It can be used to stamp out basic attacking skills with no other real forethought.
 It has the same signature as the
-\hyperref[sec:skill_func]{\lstinline|perform| function attribute}
+\hyperref[sec:skill_func]{\lstinline{perform} function attribute}
 required to define a skill, so it can be used like:
 \begin{lstlisting}
     return {

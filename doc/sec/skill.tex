@@ -73,7 +73,7 @@ for example categorising skill types in the UI or linking to animation data.
     \midrule
     |desc| & string & An english description for the skill's effect \\
     |max_level| & number & The maximum level the skill can reach; default |1| \\
-    \todo{Should we add a descriptor \lstinline|name| or something?}
+    \todo{Should we add a descriptor \lstinline{name} or something?}
 \end{apidoc}
 
 Note that |max_level| should be an integer (whole number) ---
@@ -179,7 +179,8 @@ Prefer to use this value rather than recalculating the desired attributes.
 The only calculated values you might ever need are |level| and |perks|,
 as described in \autoref{sec:skill_representation}.
 
-The parameters |source| and (if it exists) |target| are \hyperref[ch:entities]{entities}.
+The parameters |source| and (if it exists) |target|
+are \hyperref[ch:entities]{entities}.
 They are described in detail in \autoref{ch:entities}.
 
 While developing, a useful placeholder for the |perform| attribute's function is

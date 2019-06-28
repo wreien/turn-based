@@ -13,11 +13,12 @@
 \usepackage{float}
 \usepackage{calc}
 \usepackage{xparse}
+\usepackage{etoolbox}
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{hyperref}
 
-% \selectcolormodel{natural}
+\selectcolormodel{natural}
 \tcbuselibrary{skins,breakable,listings,listingsutf8}
 
 \hypersetup{
@@ -33,6 +34,7 @@
 \setsecnumdepth{section}
 \makeoddfoot{plain}{}{}{\thepage}
 \makeoddhead{ruled}{}{}{\leftmark}
+\raggedbottom
 
 \makeindex
 
@@ -69,7 +71,6 @@
     % frame=l,
     % rulecolor=\color{gray},
     % backgroundcolor=\color{gray!10},
-    % columns=fullflexible,
 }
 \lstMakeShortInline[basicstyle=\ttfamily]{|}
 \newcommand\thead[1]{\textbf{#1}}
@@ -81,12 +82,22 @@
     borderline west={2pt}{0pt}{gray!75}
 }
 
+% make ToC entries raggedright without hyphenation
+\makeatletter
+\renewcommand{\@tocrmarg}{2.55em plus1fil}
+\makeatother
+
+\newlistof{listoftodos}{todo}{Still To Do}
+\newlistentry[chapter]{todo}{todo}{0}
+\addtodef\insertchapterspace{}%
+    {\addtocontents{todo}{\protect\addvspace{10pt}}}
+
 \makeatletter
 \newcommand\apidoc@post\@empty
-\newcommand\apidoc@in\BooleanFalse
+\newtoggle{inapidoc}
 \NewDocumentEnvironment{apidoc}{ooms}{%
     \renewcommand\apidoc@post\@empty
-    \renewcommand\apidoc@in\BooleanTrue
+    \toggletrue{inapidoc}
     \IfBooleanTF{#4}{\begin{table}}{\begin{table}[H]}
         \centering
         \footnotesize
@@ -97,15 +108,18 @@
         \bottomrule\end{tabular}
     \apidoc@post
     \renewcommand\apidoc@post\@empty
-    \renewcommand\apidoc@in\BooleanFalse
+    \togglefalse{inapidoc}
 \end{table}}
 
 \newcommand\apidoc@note[1]{\begin{danger}\textbf{NOTE: }#1\end{danger}}
-\newcommand\apidoc@todo[1]{\begin{danger}\textbf{TODO: }#1\end{danger}}
+\newcommand\apidoc@todo[1]{\refstepcounter{todo}%
+    \begin{danger}\textbf{TODO: }#1\end{danger}%
+    \phantomsection\addcontentsline{todo}{todo}{%
+        \protect\numberline{\thetodo}\protecting{#1}}}
 
 % add negative value of \footnotesize\the\baselineskip
 % to remove spurious row from table (XXX this is such a hack!)
-\newcommand\apidoc@addifin[1]{\IfBooleanTF{\apidoc@in}%
+\newcommand\apidoc@addifin[1]{\iftoggle{inapidoc}%
     {\g@addto@macro\apidoc@post{\medskip #1}\\[-11.0pt]}{#1}}
 
 \newcommand\note[1]{\apidoc@addifin{\apidoc@note{#1}}}
@@ -113,7 +127,7 @@
 \makeatother
 
 \newcommand\unimplemented[1]{\note{%
-    ``\lstinline|#1|'' has not yet been implemented.}}
+    ``\lstinline{#1}'' has not yet been implemented.}}
 
 \begin{document}
 
@@ -138,6 +152,8 @@
 
 \clearpage
 \listoftables
+\clearpage
+\listoftodos
 
 \mainmatter
 \include{sec/skill}
