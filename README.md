@@ -53,7 +53,9 @@ Currently the following renderers are available:
 
 ## Documentation
 
-There is some documentation available under the `doc/` folder regarding the
-layout and use of the Lua configuration files, particularly for designing
-[skills](doc/skills.md). At some point this will be moved into its own thing
-rather than relying on GitHub for this, but that can wait ;)
+The documentation can be found under the `doc/` directory, in the form of
+LaTeX files. They require a relatively recent distribution of TeXLive to build
+correctly. Notably, pandoc currently falls over trying to interpret it.
+
+At some stage a pre-built PDF of the documentation will be available online.
+Not yet, though — I don't have anywhere to put it ;)
