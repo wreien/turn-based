@@ -1,18 +1,19 @@
 ﻿# visiual studio
-/.vs
-/CMakeSettings.json
+.vs
+CMakeSettings.json
 
 # latex
-*.aux
-*.fdb_latexmk
-*.fls
-*.idx
-*.ilg
-*.ind
-*.log
-*.out
-*.toc
-*.lot
+doc/**/*.aux
+doc/**/*.fdb_latexmk
+doc/**/*.fls
+doc/**/*.idx
+doc/**/*.ilg
+doc/**/*.ind
+doc/**/*.log
+doc/**/*.out
+doc/**/*.toc
+doc/**/*.lot
+doc/**/*.todo
 
 # output files
 *.pdf
