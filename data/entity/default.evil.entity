@@ -6,8 +6,8 @@
 ### stats ###
 #############
 
-max_hp 20
-max_mp 6
+max_health 20
+max_mana 6
 max_tech 4
 
 p_atk 5

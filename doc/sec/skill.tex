@@ -90,9 +90,9 @@ representing no cost of that kind.
 \begin{apidoc}[Skill costs][tbl:skill_costs]{lll}
     \thead{Attribute} & \thead{Type} & \thead{Description} \\
     \midrule
-    |hp_cost|   & number & The amount of HP required to cast the skill \\
-    |mp_cost|   & number & The amount of MP required to cast the skill \\
-    |tech_cost| & number & The amount of Tech required to cast the skill \\
+    |health_cost|   & number & The amount of HP required to cast the skill \\
+    |mana_cost|   & number & The amount of MP required to cast the skill \\
+    |tech_cost| & number & The amount of TP required to cast the skill \\
     |items|     & list & Any other components required to cast the skill \\
     \unimplemented{items}
 \end{apidoc}
@@ -222,8 +222,8 @@ demonstrating usage of most of the attributes described above.
                 .. "damaging their whole team.",
             max_level = 5,
 
-            -- we leave out \texttt{hp\_cost} here as it's not relevant
-            mp_cost = 30,
+            -- we leave out \texttt{health\_cost} here as it's not relevant
+            mana_cost = 30,
             tech_cost = 10,
             -- we need two fire stones to use the skill
             items = { "fire stone", "fire stone" },

@@ -105,7 +105,7 @@ function skill.default_perform(s, source, target)
             end
 
             -- deal the damage we intended to do
-            entity:drainHP(mod * raw)
+            entity:drainHealth(mod * raw)
         end
     end
 end

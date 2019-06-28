@@ -47,9 +47,9 @@ public:
     [[nodiscard]] const std::string& getDescription() const noexcept { return desc; }
     [[nodiscard]] int getLevel() const noexcept { return level; }
     [[nodiscard]] int getMaxLevel() const noexcept { return max_level; }
-    [[nodiscard]] std::optional<int> getHPCost() const noexcept { return hp_cost; }
-    [[nodiscard]] std::optional<int> getMPCost() const noexcept { return mp_cost; }
-    [[nodiscard]] std::optional<int> getTechCost() const noexcept { return tech_cost; }
+    [[nodiscard]] std::optional<int> getHealthCost() const noexcept { return hp_cost; }
+    [[nodiscard]] std::optional<int> getManaCost() const noexcept { return mp_cost; }
+    [[nodiscard]] std::optional<int> getTechCost() const noexcept { return tp_cost; }
     [[nodiscard]] std::optional<int> getPower() const noexcept { return power; }
     [[nodiscard]] std::optional<int> getAccuracy() const noexcept { return accuracy; }
     [[nodiscard]] SkillSpread getSpread() const noexcept { return spread; }
@@ -72,7 +72,7 @@ private:
     // costs
     std::optional<int> hp_cost;
     std::optional<int> mp_cost;
-    std::optional<int> tech_cost;
+    std::optional<int> tp_cost;
     // TODO item cost
 
     // attributes

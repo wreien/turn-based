@@ -11,8 +11,8 @@ namespace battle {
 /// Defines a stat block for an entity
 struct Stats {
     // pools for health, magic, and skills respectively
-    int max_hp;
-    int max_mp;
+    int max_health;
+    int max_mana;
     int max_tech;
 
     // modifiers for physical and magical damage
@@ -39,24 +39,24 @@ struct Stats {
 
 /// Lists valid "pooled" stats
 enum class Pool {
-    HP,    ///< health pool
-    MP,    ///< mana pool
-    Tech,  ///< tech pool
+    Health,  ///< health pool
+    Mana,    ///< mana pool
+    Tech,    ///< tech pool
 };
 
 inline std::string to_string(Pool pool) noexcept {
     switch (pool) {
-    case Pool::HP: return "HP";
-    case Pool::MP: return "MP";
-    case Pool::Tech: return "Tech";
+    case Pool::Health: return "HP";
+    case Pool::Mana: return "MP";
+    case Pool::Tech: return "TP";
     }
     return "??";
 }
 
 /// Lists all the different options for a stat modifier
 enum class StatType {
-    hp,     ///< max health
-    mp,     ///< max mana
+    health, ///< max health
+    mana,   ///< max mana
     tech,   ///< max tech
     p_atk,  ///< physical attack
     p_def,  ///< physical defense

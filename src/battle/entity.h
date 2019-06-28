@@ -101,10 +101,10 @@ public:
     /// Get the current maximum value of the specified pool
     template <Pool pool>
     [[nodiscard]] auto getMax() const noexcept {
-        if constexpr (pool == Pool::HP)
-            return getStats().max_hp;
-        else if constexpr (pool == Pool::MP)
-            return getStats().max_mp;
+        if constexpr (pool == Pool::Health)
+            return getStats().max_health;
+        else if constexpr (pool == Pool::Mana)
+            return getStats().max_mana;
         else if constexpr (pool == Pool::Tech)
             return getStats().max_tech;
     }
@@ -119,7 +119,7 @@ public:
         p -= std::max(amt, 0);
         if (p < 0) p = 0;
         logger.appendMessage(message::PoolChanged{ *this, pool, old, p });
-        if constexpr (pool == Pool::HP)
+        if constexpr (pool == Pool::Health)
             if (p == 0) logger.appendMessage(message::Died{ *this });
     }
 
@@ -149,7 +149,7 @@ public:
     }
 
     [[nodiscard]] bool isDead() const noexcept {
-        return hp <= 0;
+        return health <= 0;
     }
 
     /// Handle any processes that happen after the entity's turn.
@@ -159,20 +159,20 @@ public:
 private:
     template <Pool pool>
     constexpr auto& getPoolRef() noexcept {
-        if constexpr (pool == Pool::HP)
-            return hp;
-        else if constexpr (pool == Pool::MP)
-            return mp;
+        if constexpr (pool == Pool::Health)
+            return health;
+        else if constexpr (pool == Pool::Mana)
+            return mana;
         else if constexpr (pool == Pool::Tech)
             return tech;
     }
 
     template <Pool pool>
     constexpr const auto& getPoolRef() const noexcept {
-        if constexpr (pool == Pool::HP)
-            return hp;
-        else if constexpr (pool == Pool::MP)
-            return mp;
+        if constexpr (pool == Pool::Health)
+            return health;
+        else if constexpr (pool == Pool::Mana)
+            return mana;
         else if constexpr (pool == Pool::Tech)
             return tech;
     }
@@ -188,9 +188,9 @@ private:
     Stats stats;
 
     // current stats
-    int hp;    ///< remaining health
-    int mp;    ///< remaining magic
-    int tech;  ///< remaining tech
+    int health;  ///< remaining health
+    int mana;    ///< remaining magic
+    int tech;    ///< remaining tech
 
     /// Status effects
     std::vector<StatusEffect> effects;

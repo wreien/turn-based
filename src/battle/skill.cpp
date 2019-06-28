@@ -13,9 +13,9 @@ Skill::Skill(const std::string& name, int level)
 
 bool Skill::isUsableBy(const Entity& source) const noexcept {
     // note: std::nullopt < x for all x
-    if (details.getHPCost() > source.get<Pool::HP>())
+    if (details.getHealthCost() > source.get<Pool::Health>())
         return false;
-    if (details.getMPCost() > source.get<Pool::MP>())
+    if (details.getManaCost() > source.get<Pool::Mana>())
         return false;
     if (details.getTechCost() > source.get<Pool::Tech>())
         return false;
@@ -35,10 +35,10 @@ void Skill::use(MessageLogger& logger,
 
 void Skill::processCost(MessageLogger& logger, Entity& source) const noexcept {
     // rewrite with expansion statements when C++20 becomes a thing
-    if (auto cost = details.getHPCost(); cost)
-        source.drain<Pool::HP>(logger, *cost);
-    if (auto cost = details.getMPCost(); cost)
-        source.drain<Pool::MP>(logger, *cost);
+    if (auto cost = details.getHealthCost(); cost)
+        source.drain<Pool::Health>(logger, *cost);
+    if (auto cost = details.getManaCost(); cost)
+        source.drain<Pool::Mana>(logger, *cost);
     if (auto cost = details.getTechCost(); cost)
         source.drain<Pool::Tech>(logger, *cost);
     // TODO items

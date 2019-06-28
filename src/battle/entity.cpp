@@ -30,8 +30,8 @@ Entity::Entity(EntityID id, int level, Stats stats, std::vector<Skill>&& skills)
     , level{ level }
     , exp_to_next{ 0 }
     , stats{ stats }
-    , hp{ this->stats.max_hp }
-    , mp{ this->stats.max_mp }
+    , health{ this->stats.max_health }
+    , mana{ this->stats.max_mana }
     , tech{ this->stats.max_tech }
     , effects{ }
     , skills{ std::move(skills) }
@@ -67,13 +67,13 @@ Stats Entity::getStats() const noexcept {
     return calculateModifiedStats(stats, mods);
 }
 
-// TODO: cap/mod hp/mp/tech as appropriate
+// TODO: cap/mod hp/mp/tp as appropriate
 void Entity::applyStatusEffect(MessageLogger& logger, StatusEffect s) {
     logger.appendMessage(message::StatusEffect{ *this, s.getName(), true });
     effects.emplace_back(std::move(s));
 }
 
-// TODO: cap/mod hp/mp/tech as appropriate
+// TODO: cap/mod hp/mp/tp as appropriate
 void Entity::processTurnEnd(MessageLogger& logger) noexcept {
     // move effects being removed to the end
     auto it = std::partition(std::begin(effects), std::end(effects), [](auto&& e) {

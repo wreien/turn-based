@@ -12,16 +12,16 @@ Stats calculateModifiedStats(Stats s, const std::vector<StatModifier>& mods) noe
 
     auto performMod = [&s](StatType stat, auto modFunc) {
         switch (stat) {
-            case StatType::hp:     modFunc(s.max_hp);   break;
-            case StatType::mp:     modFunc(s.max_mp);   break;
+            case StatType::health: modFunc(s.max_health); break;
+            case StatType::mana:   modFunc(s.max_mana); break;
             case StatType::tech:   modFunc(s.max_tech); break;
-            case StatType::p_atk:  modFunc(s.p_atk);    break;
-            case StatType::p_def:  modFunc(s.p_def);    break;
-            case StatType::m_atk:  modFunc(s.m_atk);    break;
-            case StatType::m_def:  modFunc(s.m_def);    break;
-            case StatType::skill:  modFunc(s.skill);    break;
-            case StatType::evade:  modFunc(s.evade);    break;
-            case StatType::speed:  modFunc(s.speed);    break;
+            case StatType::p_atk:  modFunc(s.p_atk); break;
+            case StatType::p_def:  modFunc(s.p_def); break;
+            case StatType::m_atk:  modFunc(s.m_atk); break;
+            case StatType::m_def:  modFunc(s.m_def); break;
+            case StatType::skill:  modFunc(s.skill); break;
+            case StatType::evade:  modFunc(s.evade); break;
+            case StatType::speed:  modFunc(s.speed); break;
             case StatType::resist: break;
         }
     };

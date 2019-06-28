@@ -99,13 +99,13 @@ namespace {
 
         metatable["stats"] = sol::readonly_property(&EntityLogger::getStats);
 
-        metatable["drainHP"]   = wrap_drain_restore(&Entity::drain<Pool::HP>);
-        metatable["drainMP"]   = wrap_drain_restore(&Entity::drain<Pool::MP>);
-        metatable["drainTech"] = wrap_drain_restore(&Entity::drain<Pool::Tech>);
+        metatable["drainHealth"] = wrap_drain_restore(&Entity::drain<Pool::Health>);
+        metatable["drainMana"]   = wrap_drain_restore(&Entity::drain<Pool::Mana>);
+        metatable["drainTech"]   = wrap_drain_restore(&Entity::drain<Pool::Tech>);
 
-        metatable["restoreHP"]   = wrap_drain_restore(&Entity::restore<Pool::HP>);
-        metatable["restoreMP"]   = wrap_drain_restore(&Entity::restore<Pool::MP>);
-        metatable["restoreTech"] = wrap_drain_restore(&Entity::restore<Pool::Tech>);
+        metatable["restoreHealth"] = wrap_drain_restore(&Entity::restore<Pool::Health>);
+        metatable["restoreMana"]   = wrap_drain_restore(&Entity::restore<Pool::Mana>);
+        metatable["restoreTech"]   = wrap_drain_restore(&Entity::restore<Pool::Tech>);
 
         metatable["level"]      = wrap_entity_property(&Entity::getLevel);
         metatable["experience"] = wrap_entity_property(&Entity::getExperience);
@@ -114,11 +114,11 @@ namespace {
 
         // need to do this because GCC has a bug;
         // see https://gcc.gnu.org/bugzilla/show_bug.cgi?id=64194
-        auto getHP = &Entity::get<Pool::HP>;
-        auto getMP = &Entity::get<Pool::MP>;
+        auto getHealth = &Entity::get<Pool::Health>;
+        auto getMana = &Entity::get<Pool::Mana>;
         auto getTech = &Entity::get<Pool::Tech>;
-        metatable["hp"]   = wrap_entity_property(getHP);
-        metatable["mp"]   = wrap_entity_property(getMP);
+        metatable["health"] = wrap_entity_property(getHealth);
+        metatable["mana"] = wrap_entity_property(getMana);
         metatable["tech"] = wrap_entity_property(getTech);
 
         metatable["getTeam"] = [](EntityLogger& el) {
@@ -147,8 +147,8 @@ namespace {
     void loadStatsMetatable(sol::state_view& lua) {
         auto metatable = lua.new_usertype<Stats>("stats");
 
-        metatable["max_hp"]   = &Stats::max_hp;
-        metatable["max_mp"]   = &Stats::max_mp;
+        metatable["max_health"] = &Stats::max_health;
+        metatable["max_mealth"] = &Stats::max_mana;
         metatable["max_tech"] = &Stats::max_tech;
 
         metatable["p_atk"] = &Stats::p_atk;
@@ -351,9 +351,9 @@ namespace battle {
         desc = t["desc"];
         max_level = t["max_level"];
 
-        hp_cost = opt(t, "hp_cost");
-        mp_cost = opt(t, "mp_cost");
-        tech_cost = opt(t, "tech_cost");
+        hp_cost = opt(t, "health_cost");
+        mp_cost = opt(t, "mana_cost");
+        tp_cost = opt(t, "tech_cost");
         // items
 
         power = opt(t, "power");

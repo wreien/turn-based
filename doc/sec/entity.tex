@@ -18,9 +18,9 @@ For example:
 
 \begin{lstlisting}
     -- assuming `\texttt{e}' is an entity
-    e.kind         -- what kind of entity this is
-    e.level        -- what level the entity is
-    e:drainHP(10)  -- do some damage
+    e.kind             -- what kind of entity this is
+    e.level            -- what level the entity is
+    e:drainHealth(10)  -- do some damage
 \end{lstlisting}
 
 \section{Identification}
@@ -64,9 +64,9 @@ In approximate order of usefullnes, there is:
     \midrule
     |stats|      & \hyperref[sec:entity_stats]{stats} & The entity's stat block \\
     |is_dead|    & bool   & Whether the entity is dead or not \\
-    |hp|         & number & The entity's current HP \\
-    |mp|         & number & The entity's current MP \\
-    |tech|       & number & The entity's current Tech \\
+    |health|     & number & The entity's current HP \\
+    |mana|       & number & The entity's current MP \\
+    |tech|       & number & The entity's current TP \\
     |level|      & number & What level the entity is (e.g.\ 5) \\
     |experience| & number & Current experience, or the experience granted on death \\
 \end{apidoc}
@@ -96,22 +96,22 @@ the entity's pools, for example, do update in ``real time''.
 
 For example:
 \begin{lstlisting}
-    log(e.hp)     -- prints 10
-    e:drainHP(5)  -- deal 5 damage
-    log(e.hp)     -- prints 5, as expected
+    log(e.health)     -- prints 10
+    e:drainHealth(5)  -- deal 5 damage
+    log(e.health)     -- prints 5, as expected
 
-    log(e.stats.max_hp)  -- prints 10
+    log(e.stats.max_health)  -- prints 10
     -- do something that reduces the entity's maximum health stat here
-    log(e.stats.max_hp)  -- still prints 10!
+    log(e.stats.max_health)  -- still prints 10!
 \end{lstlisting}
 
 \makeatletter
 \begin{apidoc}[Entity stat block attributes][tbl:entity_stats]{lll}
     \thead{Attribute} & \thead{Type} & \thead{Description} \\
     \midrule
-    |max_hp| & number & The entity's maximum HP \\
-    |max_mp| & number & The entity's maximum MP \\
-    |max_tech| & number & The entity's maximum Tech \\
+    |max_health| & number & The entity's maximum HP \\
+    |max_mana| & number & The entity's maximum MP \\
+    |max_tech| & number & The entity's maximum TP \\
     |p_atk| & number & The entity's physical attack power \\
     |p_def| & number & The entity's physical defensive strength \\
     |m_atk| & number & The entity's magical attack power \\
@@ -173,18 +173,18 @@ The differences between each function are described in \autoref{tbl:entity_pool}
 \begin{apidoc}[Entity pool modifiers][tbl:entity_pool]{ll}
     \thead{Function} & \thead{Description} \\
     \midrule
-    |drainHP(amt)| & Reduce the entity's health by |amt| \\
-    |drainMP(amt)| & Reduce the entity's mana by |amt| \\
+    |drainHealth(amt)| & Reduce the entity's health by |amt| \\
+    |drainMana(amt)| & Reduce the entity's mana by |amt| \\
     |drainTech(amt)| & Reduce the entity's tech by |amt| \\
     \midrule
-    |restoreHP(amt)| & Restore the entity's health by |amt| \\
-    |restoreMP(amt)| & Restore the entity's mana by |amt| \\
+    |restoreHealth(amt)| & Restore the entity's health by |amt| \\
+    |restoreMana(amt)| & Restore the entity's mana by |amt| \\
     |restoreTech(amt)| & Restore the entity's tech by |amt| \\
 \end{apidoc}
 
 None of the aforementioned functions can
 raise or lower the entity's pools beyond reasonable values.
-That is, you can never have health less than 0 or greater than |entity.stats.max_hp|.
+That is, you can never have health less than 0 or greater than |entity.stats.max_health|.
 
 \subsection{\lstinline{getTeam()}}
 \label{sec:entity_func_getteam}
@@ -200,7 +200,7 @@ This list may be iterated as usual, for example:
     -- note we ignore the first argument (the index number)
     for _, entity in ipairs(team) do
         -- use \texttt{entity} somehow; here's a nonsense example
-        if entity.hp < 20 then
+        if entity.health < 20 then
             log(message.notify(entity.name .. " is dying!"))
         end
     end

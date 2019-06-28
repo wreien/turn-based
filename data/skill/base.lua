@@ -80,8 +80,8 @@ skilllist_mt.__newindex = function (table, key, value)
 
     optional_value_type(s, key, "max_level", "number")
 
-    optional_value_type(s, key, "hp_cost", "number")
-    optional_value_type(s, key, "mp_cost", "number")
+    optional_value_type(s, key, "health_cost", "number")
+    optional_value_type(s, key, "mana_cost", "number")
     optional_value_type(s, key, "tech_cost", "number")
 
     optional_value_type(s, key, "power", "number")
@@ -92,8 +92,8 @@ skilllist_mt.__newindex = function (table, key, value)
     optional_value_enum(s, key, "element", element)
 
     warn_fractional(s, key, "max_level")
-    warn_fractional(s, key, "hp_cost")
-    warn_fractional(s, key, "mp_cost")
+    warn_fractional(s, key, "health_cost")
+    warn_fractional(s, key, "mana_cost")
     warn_fractional(s, key, "tech_cost")
     warn_fractional(s, key, "power")
     warn_fractional(s, key, "accuracy")

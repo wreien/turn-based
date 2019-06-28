@@ -66,8 +66,8 @@ std::shared_ptr<battle::Entity> loadEntity(battle::EntityID id) {
         iss >> stat;
 
         if (stat.empty() || stat[0] == '#') continue; // ignore comments
-        else if (stat == "max_hp") iss >> stats.max_hp;
-        else if (stat == "max_mp") iss >> stats.max_mp;
+        else if (stat == "max_health") iss >> stats.max_health;
+        else if (stat == "max_mana") iss >> stats.max_mana;
         else if (stat == "max_tech") iss >> stats.max_tech;
         else if (stat == "p_atk") iss >> stats.p_atk;
         else if (stat == "p_def") iss >> stats.p_def;
@@ -88,8 +88,8 @@ std::shared_ptr<battle::Entity> loadEntity(battle::EntityID id) {
         if (stat <= 0)
             throw std::invalid_argument("bad value for '" + name + "'.");
     };
-    test_stat(stats.max_hp, "max_hp");
-    test_stat(stats.max_mp, "max_mp");
+    test_stat(stats.max_health, "max_health");
+    test_stat(stats.max_mana, "max_mana");
     test_stat(stats.max_tech, "max_tech");
     test_stat(stats.p_atk, "p_atk");
     test_stat(stats.p_def, "p_def");
@@ -197,15 +197,19 @@ auto generateTeams() {
 }
 
 void drawEntity(const battle::Entity& entity) {
-    constexpr auto HP   = battle::Pool::HP;
-    constexpr auto MP   = battle::Pool::MP;
-    constexpr auto Tech = battle::Pool::Tech;
+    constexpr auto HP = battle::Pool::Health;
+    constexpr auto MP = battle::Pool::Mana;
+    constexpr auto TP = battle::Pool::Tech;
+
+    const auto HP_str = to_string(HP) + ": ";
+    const auto MP_str = to_string(MP) + ": ";
+    const auto TP_str = to_string(TP) + ": ";
 
     std::cout << "\"" << entity.getID().name << "\" "
               << "level " << entity.getLevel() << " | "
-              << "HP: " << entity.get<HP>() << "/" << entity.getMax<HP>() << " | "
-              << "MP: " << entity.get<MP>() << "/" << entity.getMax<MP>() << " | "
-              << "Tech: " << entity.get<Tech>() << "/" << entity.getMax<Tech>() << "\n";
+              << HP_str << entity.get<HP>() << "/" << entity.getMax<HP>() << " | "
+              << MP_str << entity.get<MP>() << "/" << entity.getMax<MP>() << " | "
+              << TP_str << entity.get<TP>() << "/" << entity.getMax<TP>() << "\n";
 }
 
 void drawTeams(const battle::BattleSystem& system) {
@@ -270,21 +274,21 @@ void handleUserChoice(battle::PlayerController& controller,
 
                 std::cout << " | cost = ";
                 bool has_cost = false;
-                if (auto hpc = details.getHPCost(); hpc) {
+                if (auto hpc = details.getHealthCost(); hpc) {
                     has_cost = true;
-                    std::cout << *hpc << " HP";
+                    std::cout << *hpc << " " << to_string(battle::Pool::Health);
                 }
-                if (auto mpc = details.getMPCost(); mpc) {
+                if (auto mpc = details.getManaCost(); mpc) {
                     if (has_cost)
                         std::cout << " + ";
                     has_cost = true;
-                    std::cout << *mpc << " MP";
+                    std::cout << *mpc << " " << to_string(battle::Pool::Mana);
                 }
                 if (auto tpc = details.getTechCost(); tpc) {
                     if (has_cost)
                         std::cout << " + ";
                     has_cost = true;
-                    std::cout << *tpc << " TP";
+                    std::cout << *tpc << " " << to_string(battle::Pool::Tech);
                 }
                 if (!has_cost)
                     std::cout << "none";
@@ -341,17 +345,25 @@ void handleUserChoice(battle::PlayerController& controller,
         });
     choice.emplace_back('i', "[I]nfo", [&controller](){
         using P = battle::Pool;
+        constexpr auto HP = P::Health;
+        constexpr auto MP = P::Mana;
+        constexpr auto TP = P::Tech;
+
         const auto printStat = [](auto stat) {
             return std::string(static_cast<unsigned>(stat), '*');
+        };
+
+        const auto pool_string = [](P pool) {
+            return to_string(pool) + ": ";
         };
 
         auto& e = controller.getEntity();
         battle::Stats s = e.getStats();
         std::cout << "Stats for " << e.getID().name << ":\n";
         std::cout
-            << "  - HP:     " << e.get<P::HP>() << "/" << e.getMax<P::HP>() << "\n"
-            << "  - MP:     " << e.get<P::MP>() << "/" << e.getMax<P::MP>() << "\n"
-            << "  - Tech:   " << e.get<P::Tech>() << "/" << e.getMax<P::Tech>() << "\n"
+            << "  - " << pool_string(HP) << e.get<HP>() << "/" << e.getMax<HP>() << "\n"
+            << "  - " << pool_string(MP) << e.get<MP>() << "/" << e.getMax<MP>() << "\n"
+            << "  - " << pool_string(TP) << e.get<TP>() << "/" << e.getMax<TP>() << "\n"
             << "  - P. atk: " << printStat(s.p_atk) << "\n"
             << "  - P. def: " << printStat(s.p_def) << "\n"
             << "  - M. atk: " << printStat(s.m_atk) << "\n"
