@@ -4,6 +4,7 @@
 #include <vector>
 #include <utility>
 #include <memory>
+#include <queue>
 #include "battle/messages.h"
 
 namespace battle {
@@ -41,18 +42,12 @@ public:
     BattleSystem(const BattleSystem&) = delete;
     BattleSystem& operator=(const BattleSystem&) = delete;
 
-    void pushCombatant(Team team, EntityRef e) {
-        addEntryToTurnOrder();
-        combatants.emplace_back(team, e);
-    }
+    void pushCombatant(Team team, EntityRef e);
 
     template <typename... Args>
     void emplaceCombatant(Team team, Args&&... args) {
-        addEntryToTurnOrder();
-        combatants.emplace_back(
-            team,
-            std::make_shared<Entity>(std::forward<Args>(args)...)
-        );
+        auto ref = std::make_shared<Entity>(std::forward<Args>(args)...);
+        pushCombatant(team, std::move(ref));
     }
 
     /// Get the entities that are part of the specified team.
@@ -71,33 +66,55 @@ public:
     TurnInfo doTurn();
 
     /// Has the battle finished yet?
-    bool isDone() const;
+    bool isDone() const noexcept;
 
 private:
+    using Timepoint = double;
     struct Combatant {
         Team team;
         EntityRef entity;
 
-        Combatant(Team team, EntityRef entity)
-            : team{ team }, entity{ entity }
+        /// What time the next turn for this combatant happens
+        Timepoint last_turn;
+        Timepoint next_turn;
+
+        // TODO: C++20 get rid of this unnecessary constructor
+        Combatant(Team team, EntityRef entity, Timepoint last_turn, Timepoint next_turn)
+            : team{ team }
+            , entity{ entity }
+            , last_turn{ last_turn }
+            , next_turn{ next_turn }
         {}
     };
 
-    /// Sort the turn order in order of speed.
-    /// Points current_turn to the start of the new order.
-    void sortTurnOrder();
+    struct CombatantRef {
+        std::size_t index;
+        std::vector<Combatant>* combatants;
 
-    /// Adds a new entry to the turn order.
-    /// Does not invalidate current_turn.
-    void addEntryToTurnOrder();
+        Combatant& get() const noexcept { return (*combatants)[index]; }
+        Combatant* operator->() const noexcept { return &get(); }
+        Combatant& operator*() const noexcept { return get(); }
+    };
 
-    void gotoNextTurn();
+    struct CombatantRefCmp {
+        bool operator()(CombatantRef a, CombatantRef b) const noexcept;
+    };
 
-    std::vector<Combatant> combatants;
+    /// The list of all combatants, living and dead
+    std::vector<Combatant> combatants = {};
 
-    using CombatantRef = std::size_t;
-    std::vector<CombatantRef> turn_order;
-    std::vector<CombatantRef>::iterator current_turn;
+    /// Create a ref referring to the combatant with given index
+    CombatantRef newRef(std::size_t index);
+
+    /// List of references to combatants, in order of who goes next
+    std::priority_queue<
+        CombatantRef, std::vector<CombatantRef>, CombatantRefCmp> turn_order = {};
+
+    /// Takes the current turn at sticks it back into the queue
+    void gotoNextTurn() noexcept;
+
+    /// Get the timestep difference
+    Timepoint diff(const Entity* e) const noexcept;
 };
 
 

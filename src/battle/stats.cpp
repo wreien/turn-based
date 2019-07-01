@@ -21,7 +21,7 @@ Stats calculateModifiedStats(Stats s, const std::vector<StatModifier>& mods) noe
             case StatType::m_def:  modFunc(s.m_def); break;
             case StatType::skill:  modFunc(s.skill); break;
             case StatType::evade:  modFunc(s.evade); break;
-            case StatType::speed:  modFunc(s.speed); break;
+            case StatType::react:  modFunc(s.react); break;
             case StatType::resist: break;
         }
     };

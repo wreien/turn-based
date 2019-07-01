@@ -10,27 +10,20 @@
 namespace battle {
 
 BattleSystem::BattleSystem(const std::vector<EntityRef>& blues,
-                           const std::vector<EntityRef>& reds)
-    : combatants{}
-    , turn_order{}
-    , current_turn{ std::end(turn_order) }
-{
+                           const std::vector<EntityRef>& reds) {
     combatants.reserve(blues.size() + reds.size());
-    turn_order.reserve(blues.size() + reds.size());
 
-    CombatantRef r = 0;
-    for (const auto& e : blues) {
-        combatants.emplace_back(Team::Blue, e);
-        turn_order.push_back(r++);
-    }
-    for (const auto& e : reds) {
-        combatants.emplace_back(Team::Red, e);
-        turn_order.push_back(r++);
-    }
+    const auto push = [this](Team team, const EntityRef& e) {
+        auto dt = diff(e.get());
+        combatants.emplace_back(team, e, 0, dt);
+        turn_order.push(newRef(combatants.size() - 1));
+    };
 
-    sortTurnOrder();
+    for (const auto& e : blues)
+        push(Team::Blue, e);
+    for (const auto& e : reds)
+        push(Team::Red, e);
 }
-
 
 std::vector<Entity*> BattleSystem::teamMembersOf(Team team) noexcept {
     std::vector<Entity*> entities;
@@ -61,29 +54,37 @@ Team BattleSystem::teamOf(const Entity& e) const {
 
 // Turn order business
 
-void BattleSystem::sortTurnOrder() {
-    auto sortfn = [&c = combatants](CombatantRef a, CombatantRef b) {
-        auto aspd = c[a].entity->getStats().speed;
-        auto bspd = c[b].entity->getStats().speed;
-        if (aspd != bspd)
-            return aspd > bspd;
-        if (c[a].team != c[b].team)
-            return static_cast<int>(c[a].team) < static_cast<int>(c[b].team);
-        return a < b; // yes, ref compare - want order in the master list
-    };
-    std::sort(std::begin(turn_order), std::end(turn_order), sortfn);
-    current_turn = std::begin(turn_order);
+bool BattleSystem::CombatantRefCmp::operator()
+        (CombatantRef a, CombatantRef b) const noexcept
+{
+    auto& ca = a.get();
+    auto& cb = b.get();
+    if (ca.next_turn == cb.next_turn)
+        return a.index > b.index;
+    return ca.next_turn > cb.next_turn;
 }
 
-void BattleSystem::addEntryToTurnOrder() {
-    auto dist = std::distance(std::begin(turn_order), current_turn);
-    turn_order.push_back(turn_order.size());
-    current_turn = std::begin(turn_order) + dist;
+BattleSystem::CombatantRef BattleSystem::newRef(std::size_t index) {
+    return CombatantRef{ index, &combatants };
 }
 
-void BattleSystem::gotoNextTurn() {
-    if (++current_turn == std::end(turn_order))
-        sortTurnOrder();
+BattleSystem::Timepoint BattleSystem::diff(const Entity* e) const noexcept {
+    return 100.0 / e->getStats().react;
+}
+
+void BattleSystem::pushCombatant(Team team, EntityRef e) {
+    auto dt = diff(e.get());
+    auto now = turn_order.empty() ? 0 : turn_order.top()->next_turn;
+    combatants.emplace_back(team, std::move(e), now, now + dt);
+    turn_order.push(newRef(combatants.size() - 1));
+}
+
+void BattleSystem::gotoNextTurn() noexcept {
+    auto ref = turn_order.top();
+    turn_order.pop();
+    ref->last_turn  = ref->next_turn;
+    ref->next_turn += diff(ref->entity.get());
+    turn_order.push(ref);
 }
 
 
@@ -91,7 +92,7 @@ void BattleSystem::gotoNextTurn() {
 
 TurnInfo BattleSystem::doTurn() {
     // skip dead people
-    auto& c = combatants[*current_turn];
+    Combatant& c = *turn_order.top();
     TurnInfo info { true, false, nullptr, {} };
     if (c.entity->isDead()) {
         gotoNextTurn();
@@ -146,7 +147,7 @@ TurnInfo BattleSystem::doTurn() {
     return info;
 }
 
-bool BattleSystem::isDone() const {
+bool BattleSystem::isDone() const noexcept {
     const auto is_dead = [](const Entity* e){ return e->isDead(); };
 
     const auto red  = teamMembersOf(Team::Red);

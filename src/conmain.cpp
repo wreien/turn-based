@@ -75,7 +75,7 @@ std::shared_ptr<battle::Entity> loadEntity(battle::EntityID id) {
         else if (stat == "m_def") iss >> stats.m_def;
         else if (stat == "skill") iss >> stats.skill;
         else if (stat == "evade") iss >> stats.evade;
-        else if (stat == "speed") iss >> stats.speed;
+        else if (stat == "react") iss >> stats.react;
         else if (stat == "ability") {
             std::string skill_name;
             std::getline(iss >> std::ws, skill_name);
@@ -97,7 +97,7 @@ std::shared_ptr<battle::Entity> loadEntity(battle::EntityID id) {
     test_stat(stats.m_def, "m_def");
     test_stat(stats.skill, "skill");
     test_stat(stats.evade, "evade");
-    test_stat(stats.speed, "speed");
+    test_stat(stats.react, "react");
 
     return std::make_shared<Entity>(id, 1, stats, std::move(skills));
 }
@@ -370,7 +370,7 @@ void handleUserChoice(battle::PlayerController& controller,
             << "  - M. def: " << printStat(s.m_def) << "\n"
             << "  - Skill:  " << printStat(s.skill) << "\n"
             << "  - Evade:  " << printStat(s.evade) << "\n"
-            << "  - Speed:  " << printStat(s.speed) << "\n";
+            << "  - React:  " << printStat(s.react) << "\n";
         auto& effects = e.getAppliedStatusEffects();
         if (!effects.empty()) {
             std::cout << "Applied status effects:\n";

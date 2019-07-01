@@ -118,7 +118,7 @@ For example:
     |m_def| & number & The entity's magical defensive strength \\
     |skill| & number & The entity's accuracy modifier to increase hit chance \\
     |evade| & number & The entity's evasion modifier to decrease hit chance \\
-    |speed| & number & Determines the entity's placing in the turn order\\
+    |react| & number & Determines the entity's placing in the turn order\\
     \todo{Add a \lstinline{luck} attribute?}
     \midrule
     \hyperref[sec:entity_stats_resists]{\texttt{resists}} & function
@@ -126,6 +126,12 @@ For example:
     \note{Maybe rename \lstinline{resists} to \lstinline{affinity}?
         (And take all that that implies as well.)}
 \end{apidoc}
+
+The stat |react| is a little interesting.
+As well as determining the initial turn order of the entities,
+it also determines how many turns they get.
+That is, a character with very high |react| will get
+(potentially very many) turns more than a character with low |react|.
 
 All numbers are integers.
 Note the |resists| function included in the above is not technically an attribute.

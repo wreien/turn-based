@@ -27,7 +27,7 @@ struct Stats {
     int evade;
 
     // turn order
-    int speed;
+    int react;
 
     // base resistances
     [[nodiscard]] constexpr int getResistance(Element e) const noexcept
@@ -64,8 +64,8 @@ enum class StatType {
     m_def,  ///< magical defense
     skill,  ///< hit chance (percentage)
     evade,  ///< evade chance (percentage)
-    speed,  ///< move speed/turn order
-    resist  ///< some elemental resistance
+    react,  ///< move speed/turn order
+    resist, ///< some elemental resistance
 };
 
 /// Ways a modifier affects a statistic

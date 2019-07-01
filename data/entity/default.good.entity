@@ -19,7 +19,7 @@ m_def 2
 skill 8
 evade 1
 
-speed 4
+react 4
 
 
 ### skills ###

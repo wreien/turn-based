@@ -157,7 +157,7 @@ namespace {
         metatable["m_def"] = &Stats::m_def;
         metatable["skill"] = &Stats::skill;
         metatable["evade"] = &Stats::evade;
-        metatable["speed"] = &Stats::speed;
+        metatable["react"] = &Stats::react;
 
         // not *quite* a real property
         metatable["resists"] = sol::overload(
