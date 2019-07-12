@@ -6,7 +6,7 @@ function skill.list.attack(level)
         desc = "A basic attacking move.",
         max_level = 5,
 
-        power = 50 + 5 * (level - 1),
+        power = 50 + 10 * (level - 1),
         accuracy = 70 + 5 * (level - 1),
         method = method.physical,
 
